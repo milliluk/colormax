@@ -1,0 +1,50 @@
+* PCOPY
+* A=SOURCE PAGE
+* B=DESTINATION PAGE
+* 0=ICON;1=FULL;2=SHIT
+A@     FCB   60,48,52
+PCOPY  PSHS  D,X,U
+       LDX   #A@
+       LDA   A,X
+       LDB   B,X
+
+       LDX   $FFA3
+       PSHS  X
+
+       STD   $FFA3
+       LDA   #4
+       PSHS  A     ,S=# OF BLKS
+
+COPENT
+A@     LDX   #$6000
+       LDU   #$8000
+B@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       CMPX  #$8000
+       BNE   B@
+       INC   $FFA3
+       INC   $FFA4
+       DEC   ,S
+       BNE   A@
+
+       LEAS  1,S
+       PULS  X
+       STX   $FFA3
+
+       PULS  D,X,U,PC
+
+       END

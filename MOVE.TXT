@@ -1,0 +1,304 @@
+       NAM   MOVE
+
+* MOVE AN OVERLAY ROUTINE;
+
+HOFF   FDB   0 HORIZONTAL OFFSET
+VOFF   FCB   0 VERTICAL OFFSET
+
+MOVEOV BSR   ISOVL2
+       TSTA
+       BEQ   ?RTS
+       JMP   MOVE2
+
+* ISOVL2
+* RET: A=0   FOR ARROW OUTSIDE
+*      A=$FF FOR ARROW INSIDE
+ISOVL2 LDD   <AX
+       CMPD  <OH1
+       BLO   NOTNOV
+       CMPD  <OH2
+       BHI   NOTNOV
+       LDA   <AY
+       CMPA  <OV1
+       BLO   NOTNOV
+       CMPA  <OV2
+       BHI   NOTNOV
+
+       LDA   #$FF
+       RTS
+
+NOTNOV CLRA
+       RTS
+
+MOVE2  LDA   $FF00
+       ANDA  #1
+       BNE   ?RTS
+
+       JSR   RPLARW
+
+       LDD   <AX
+       SUBD  <OH1
+       STD   HOFF
+       LDA   <AY
+       SUBA  <OV1
+       STA   VOFF
+
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+
+       CLR   <WPAGE
+
+MVEOV1 LDA   <WPAGE
+       JSR   PAGEIN
+       JSR   DRWARW
+MVEOV2 JSR   EDITBX
+       LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+*
+       JSR   RPLARW
+*
+       TST   <WPAGE
+       BEQ   D@
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+D@     CLRA
+       JSR   VIEW
+       JSR   PAGEIN
+       JSR   WTBUT
+       JMP   MENU
+*
+A@     JSR   JOYSTK
+*      LDX   <JOYX
+*      CMPX  <AX
+*      BNE   C@
+*      LDA   <JOYY
+*      CMPA  <AY
+*      LBEQ  MVEOV2
+*C@
+
+       LDD   <JOYX
+       STD   <AX
+       CMPD  HOFF
+       BLS   A@
+       SUBD  HOFF
+       BRA   B@
+A@     LDD   #0
+B@     STD   <JOYX
+
+       LDA   <JOYY
+       STA   <AY
+       CMPA  VOFF
+       BLS   A@
+       SUBA  VOFF
+       BRA   B@
+A@     CLRA
+B@     STA   <JOYY
+* JOYX,JOYY= NEW UPPER LEFT
+*            POSITION FOR OVL
+* VALIDATE THEM:
+
+       JSR   VALID
+
+       LDD   <OH2
+       SUBD  <OH1
+       PSHS  D
+       LDD   #308
+       SUBD  ,S++   D=MAXIMUM XPOS ALLOWED
+       CMPD  <JOYX
+       BLO   A@
+       LDD   <JOYX
+A@     STD   <JOYX
+
+       LDA   <OV2
+       SUBA  <OV1
+       PSHS  A
+       LDA   #154
+       SUBA  ,S+
+       CMPA  <JOYY
+       BLO   A@
+       LDA   <JOYY
+A@     STA   <JOYY
+
+       JSR   RPLARW
+
+       LDA   <WPAGE
+       EORA  #2
+       STA   <WPAGE
+       JSR   PAGEIN
+       JSR   GET
+
+* <JOYX & OH11 MUST HAVE SAME
+* POLARITY ...
+
+       LDA   <JOYX+1
+       ANDA  #1
+       PSHS  A
+       LDA   <OH1+1
+       ANDA  #1
+       CMPA  ,S+
+       BEQ   A@
+       LDD   <JOYX
+       ADDD  #1
+       STD   <JOYX
+A@
+
+       LDD   <OH2
+       SUBD  <OH1
+       PSHS  D
+       LDD   <JOYX
+       STD   <OH1
+       ADDD  ,S++
+       STD   <OH2
+       LDA   <OV2
+       SUBA  <OV1
+       PSHS  A
+       LDA   <JOYY
+       STA   <OV1
+       ADDA  ,S+
+       STA   <OV2
+
+       JSR   MOVE9  COPY IT
+       LDA   #127
+       STA   $FF02
+       LDA   $FF00
+       BITA  #64
+       BNE   A@
+       JSR   PUT
+A@     JSR   EDITBX DRAW BOX
+       LDA   <WPAGE
+       JSR   VIEW
+       JMP   MVEOV1
+
+* PUT OVERLAY;
+* REMOVE EDIT BOX AND LOCK IT!
+PUTOVL CLRA
+       JSR   VIEW
+       LDA   #2
+       STA   <WPAGE
+       JSR   PAGEIN
+       JSR   GET
+       JSR   MOVE9
+       JSR   PUT
+       LDX   #0
+       STX   <OH1
+       CLRA
+       JSR   PAGEIN
+       JMP   GET
+
+* THIS ROUTINE COPIES THE OVERLY
+* FROM PAGE #6 TO <WPAGE AT
+* OH1 OH2 OV1 OV2
+MOVE9  LDX   $FFA4
+       LDU   $FFA6
+       PSHS  X,U
+
+       LDB   <OXSZE
+       PSHS  B
+       LDB   #159
+       SUBB  ,S
+       PSHS  B
+       LDB   <OXL
+       PSHS  B
+       LDB   <OXR
+       PSHS  B
+
+       LDD   #$2021
+       STD   $FFA4
+
+       LDA   <OV1
+       LDB   #160
+       MUL
+       TFR   D,X
+       LDD   <OH1
+       LSRA
+       RORB
+       LEAX  D,X
+
+       LDB   #$3C
+       TST   <WPAGE
+       BEQ   A@
+       LDB   #$34
+A@     CMPX  #8192
+       BLO   B@
+       INCB
+       LEAX  -8192,X
+       BRA   A@
+B@     STB   $FFA6
+       INCB
+       STB   $FFA7
+
+       LDU   #$8000
+       LEAX  $C000,X
+
+       LDA   <OYSZE
+       PSHS  A
+
+*Copy the shit*
+
+MVELP  LDA   <OXL
+       BMI   A@
+       LDA   ,U+
+       ANDA  #$0F
+       PSHS  A
+       LDA   ,X
+       ANDA  #$F0
+       ORA   ,S+
+       BRA   B@
+A@     LDA   ,U+
+B@     STA   ,X+
+
+       LDB   4,S
+       BEQ   MVELPZ
+A@     LDA   ,U+
+       STA   ,X+
+       DECB
+       BNE   A@
+MVELPZ
+
+       LDA   <OXR
+       CMPA  #$FF
+       BEQ   A@
+       LDA   ,U
+       ANDA  #$F0
+       PSHS  A
+       LDA   ,X
+       ANDA  #$0F
+       ORA   ,S+
+       BRA   B@
+A@     LDA   ,U
+B@     STA   ,X
+
+       CLRA
+       LDB   3,S
+       LEAX  D,X
+       LEAU  D,U
+
+       CMPX  #$E000
+       BLO   T@
+       INC   $FFA6
+       INC   $FFA7
+       LEAX  -8192,X
+T@
+
+       CMPU  #$A000
+       BLO   U@
+       INC   $FFA4
+       INC   $FFA5
+       LEAU  -8192,U
+U@
+
+       DEC   ,S
+       LBNE  MVELP
+
+       LEAS  5,S
+       PULS  X,U
+       STX   $FFA4
+       STU   $FFA6
+       RTS
+
+CRAP9  FCB   0
+
+       END

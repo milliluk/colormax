@@ -1,0 +1,286 @@
+*RUBBER BAND LINES
+*RUBBER-BAND LINE ROUTINE*
+*ASSUMED TO HAVE THE STARTPOINT
+*@ AX,AY WHEN THE ROUTINE IS
+*ENTERED.
+RUBLNE TST   RAYFL
+       LBNE  RAYS
+
+       JSR   PUT
+
+       LDX   #44
+       STX   LFTEDG
+       LDA   #24
+       STA   TOPEDG
+       LDX   #REDGT
+       LDB   WIDTH
+       CMPB  #255
+       BNE   I@
+       CLRB
+I@     LSLB
+       LDX   B,X
+       STX   RGTEDG
+
+       LDB   WIDTH
+       LDX   #BTEDG
+       CMPB  #255
+       BNE   I@
+       CLRB
+I@
+       LDA   B,X
+       STA   BTMEDG
+
+       CLR   RUBPGE
+       LDA   #0 WORK PAGE
+       LDB   #2 TO SHIT PAGE
+       JSR   PCOPY
+       LDD   <AX
+       ADDD  #4
+       STD   LSTX
+       LDA   <AY
+       ADDA  #5
+       STA   LSTY
+
+       JSR   JOYSTK
+       LDX   <JOYX
+       LEAX  4,X
+       STX   <JOYX
+       CMPX  LFTEDG
+       BLO   I@
+       CMPX  RGTEDG
+       BHI   J@
+       BRA   K@
+I@     LDX   LFTEDG
+       BRA   K@
+J@     LDX   RGTEDG
+K@     STX   <LH2
+       STX   LLSTX
+
+       LDX   LSTX
+       STX   <LH1
+       CMPX  RGTEDG
+       LBHI  MENU
+       LDA   <JOYY
+       ADDA  #5
+       STA   <JOYY
+       CMPA  BTMEDG
+       BHI   I@
+       CMPA  TOPEDG
+       BLO   J@
+       BRA   K@
+I@     LDA   BTMEDG
+       BRA   K@
+J@     LDA   TOPEDG
+K@     STA   <LV2
+       STA   LLSTY
+       LDA   LSTY
+       STA   <LV1
+       CMPA  BTMEDG
+       LBHI  MENU
+       LDB   COLOR
+       LDA   WIDTH
+       STA   LNEWDT
+       JSR   LINE
+       CLR   LNEWDT
+       CLR   RUBPGE START ON WRKPGE
+
+
+
+RUBLP  LDX   LLSTX
+       LEAX  -4,X
+       STX   <AX
+       LDA   LLSTY
+       SUBA  #5
+       STA   <AY
+       JSR   DRWARW
+R@     LDA   $FF00
+       BITA  #1
+       LBNE  RUBDN
+*BUTTON IS STILL HELD*
+       JSR   JOYSTK
+       LDX   <JOYX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <JOYY
+       ADDA  #5
+       STA   <JOYY
+       CMPX  LLSTX
+       BNE   RUBCH
+       CMPA  LLSTY
+       BEQ   R@
+RUBCH  JSR   RPLARW
+*THEY'VE MOVED THE LINE!*
+       LDA   RUBPGE GET LAST PAGE THAT THEY'VE SEEN
+       EORA  #2
+       STA   RUBPGE CHANGE IT.
+       JSR   PAGEIN
+*NOW HAVE A PAGE THAT THEY AREN'T LOOKING AT, AT $8000*
+       JSR   GET MAKE WINDOW OK
+
+       LDX   <JOYX
+       CMPX  LFTEDG
+       BLO   H@
+       CMPX  RGTEDG
+       BHI   J@
+       BRA   K@
+H@     LDX   LFTEDG
+       BRA   K@
+J@     LDX   RGTEDG
+K@     STX   <LH2
+       STX   LLSTX
+
+       LDA   <JOYY
+       CMPA  TOPEDG
+       BLO   J@
+       CMPA  BTMEDG
+       BHI   K@
+       BRA   L@
+J@     LDA   TOPEDG
+       BRA   L@
+K@     LDA   BTMEDG
+L@     STA   <LV2
+       STA   LLSTY
+
+
+       LDX   LSTX
+       STX   <LH1
+       LDA   LSTY
+       STA   <LV1
+
+       LDA   WIDTH
+       STA   LNEWDT
+       LDB   COLOR
+       JSR   LINE
+       CLR   LNEWDT
+
+       LDA   RUBPGE
+       JSR   VIEW
+       JMP   RUBLP
+RUBDN  JSR   RPLARW
+       LDA   RUBPGE
+       BEQ   P@
+       LDA   #2
+       LDB   #0
+       JSR   PCOPY
+P@     CLRA
+       STA   RUBPGE
+       CLRA
+       JSR   PAGEIN
+       CLRA
+       JSR   VIEW
+
+       JMP   MENU
+
+RAYFL  FCB   0
+RAYS   LDA   WIDTH
+       STA   <LNEWDT
+       LDA   #1
+       LDB   #5
+       JSR   PCOPY
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+
+       LDA   #2
+       JSR   VIEW
+       CLR   <WPAGE
+
+       LDX   <AX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <AY
+       ADDA  #5
+       STA   <JOYY
+       JSR   VALID
+       LDX   <JOYX
+       STX   RAYH1
+       LDA   <JOYY
+       STA   RAYV1
+       JSR   WTBUT
+A@     JSR   DRWARW
+B@     JSR   JOYSTK
+       LDA   $FF00
+       ANDA  #1
+       BNE   F@
+       JSR   RPLARW
+       LDX   <JOYX
+       LEAX  4,X
+       CMPX  #309
+       LBHI  Z@
+       CMPX  #44
+       LBLO  Z@
+       LDA   <JOYY
+       ADDA  #5
+       CMPA  #24
+       LBLO  Z@
+       CMPA  #154
+       LBHI  Z@
+       JSR   PUT
+       JSR   WTBUT
+F@     LDX   <JOYX
+       CMPX  <AX
+       BNE   C@
+       LDA   <JOYY
+       CMPA  <AY
+       BEQ   B@
+C@     JSR   RPLARW
+       LDX   <JOYX
+       STX   <AX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <JOYY
+       STA   <AY
+       ADDA  #4
+       STA   <JOYY
+       JSR   VALID
+       LDA   <WPAGE
+       JSR   PAGEIN
+       JSR   GET
+       LDX   RAYH1
+       STX   <LH1
+       LDA   RAYV1
+       STA   <LV1
+       LDX   <JOYX
+       STX   <LH2
+       LDA   <JOYY
+       STA   <LV2
+       LDB   <COLOR
+       JSR   LINE
+       LDA   <WPAGE
+       JSR   VIEW
+       EORA  #2
+       STA   <WPAGE
+       JMP   A@
+Z@     CLRA
+       JSR   VIEW
+       JSR   PAGEIN
+       JSR   GET
+       LDA   #5
+       LDB   #1
+       JSR   PCOPY
+       CLR   <LNEWDT
+       JMP   MENU
+
+RAYH1  FDB   0
+RAYV1  FCB   0
+
+REDGT  FDB   309,308,306,302
+BTEDG  FCB   154,153,151,147
+
+
+
+TOPEDG FCB   0
+BTMEDG FCB   0
+LFTEDG RMB   2
+RGTEDG RMB   2
+
+
+
+
+
+LLSTX  FDB   0
+LLSTY  FCB   0
+LSTX   FDB   0
+LSTY   FCB   0
+RUBPGE FCB   0
+       END

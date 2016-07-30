@@ -1,0 +1,560 @@
+       NAM   SPECIAL
+
+* COMMANDS FOR THE "SPECIAL"
+* PULL-DOWN [MENU]
+
+* REMAP PAGE
+REMAP  LDX   #REMAPH
+       STX   MYHOOK
+       JMP   CLICK2
+* DITHER PATTERN
+DITHER LDA   <PATTRN
+       STA   THEPAT
+       LDX   #DITH
+       STX   MYHOOK
+       JMP   CLICK2
+THEPAT FCB   0
+* COPY PALETTE
+COPYP  LDX   #CPPH
+       STX   MYHOOK
+       JMP   CLICK2
+
+*SET CYCLE RANGE
+CYCR   LDX   #CYCHK
+       STX   MYHOOK
+       JMP   CLICK2
+CYCHK  CLR   [VCYC]
+       LDA   CLK1
+       CMPA  CLK2
+       BLO   A@
+       JMP   [MENU]
+A@     COM   [VCYC]
+       LDA   CLK1
+       STA   [CYCLO]
+       LDA   CLK2
+       STA   [CYCHI]
+       JMP   DON2
+
+*SET CYCLE SPEED
+CYCS   CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       LDX   #86-10
+       STX   <BH1
+       LDX   #86+148+10
+       STX   <BH2
+       LDA   #79-10
+       STA   <BV1
+       LDA   #79+34+10
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP0
+       LDB   #15
+       JSR   [BOX]
+       JSR   BUMP0
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP0
+       JSR   [BOX]
+
+       LDA   #79+8
+       STA   <BV1
+       ADDA  #11
+       STA   <BV2
+       LDX   #91
+       STX   <BH1
+       LDX   #91+138
+       STX   <BH2
+       JSR   [BOX]
+       JSR   PRETTY
+
+       LDX   #91
+       STX   <LPRTH
+       LDA   #79+8+14+2
+       STA   <LPRTV
+       LDX   #KST0
+       JSR   KST3
+       LDX   #91+106+5
+       STX   <LPRTH
+       LDX   #KST01
+       JSR   KST3
+
+       CLRA
+       LDB   #5
+       JSR   [PCOPY]
+       JSR   CYCS1
+       CLRA
+       JSR   [VIEW]
+
+A@     JSR   [MVEARW]
+       LDA   <AY
+       CMPA  #79-10
+       BLO   CYCS2
+       CMPA  #79+34+10
+       BHI   CYCS2
+       LDX   <AX
+       CMPX  #86-10
+       BLO   CYCS2
+       CMPX  #86+148+10
+       BHI   CYCS2
+       CMPA  #87
+       BLO   A@
+       CMPA  #98
+       BHI   A@
+       CMPX  #103
+       BHS   B@
+       LDX   #103
+B@     TFR   X,D
+       SUBD  #103
+       CMPD  #116
+       BLO   C@
+       LDB   #116
+C@
+       CMPB  [CYCSP]
+       LBEQ  A@
+       STB   [CYCSP]
+       BSR   CYCS1
+       JMP   A@
+
+CYCS2  LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+
+CYCS1  CLRA
+       LDB   #7
+       JSR   [PCOPY]
+       LDA   #7
+       JSR   [VIEW]
+
+       LDA   #5
+       CLRB
+       JSR   [PCOPY]
+
+       CLRA
+       LDB   [CYCSP]
+       ADDD  #93
+       STD   <BH1
+       ADDD  #18
+       STD   <BH2
+       LDA   #89
+       STA   <BV1
+       LDA   #96
+       STA   <BV2
+       CLRB
+       JSR   [FILLED]
+       CLRA
+       JMP   [VIEW]
+
+CYCC   LDX   CYCMRK
+       JSR   [TOGCHK]
+       COM   [CYCFLG]
+
+       LDX   #$FFB0
+       LDU   CYCPAL
+       LDB   #16
+       TST   [CYCFLG]
+       BNE   A@
+       EXG   X,U
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+
+       JMP   [MENU]
+
+CLK    FCB   0
+CLK1   FCB   0
+CLK2   FCB   0
+CLK1L  FCB   0
+CLK2L  FCB   0
+
+CLICK2 BSR   CLK21
+       JSR   CLK22
+       JSR   CLK23
+       JMP   CLK24
+
+CLK21  CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+
+       LDX   #96
+       STX   <BH1
+       LDX   #256
+       STX   <BH2
+       LDA   #34
+       STA   <BV1
+       LDA   #146
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP0
+       LDB   #15
+       JSR   [BOX]
+       CLRB
+       JSR   BUMP0
+       JSR   [BOX]
+       JSR   BUMP0
+       JMP   [BOX]
+
+* LEFT [BOX]
+CLK22  LDA   #8+34
+       STA   <BV1
+       LDA   #8+34+64+2
+       STA   <BV2
+       LDX   #96+11
+       STX   <BH1
+       LDX   #96+11+65
+       STX   <BH2
+       JSR   [BOX]
+       JSR   PRETTY
+
+*RIGHT [BOX]
+       LDX   #96+11+64+10+1
+       STX   <BH1
+       LDX   #96+11+64+10+65+2
+       STX   <BH2
+       JSR   [BOX]
+       JMP   PRETTY
+
+* OK & CANCEL BOXES
+CLK23  LDX   #16*8
+       STX   <LPRTH
+       LDA   #16*8
+       STA   <LPRTV
+       LDA   #14
+       STA   CURSRX
+       LDA   #16
+       STA   CURSRY
+       JSR   BSBOX0
+       LDX   #KST1
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #136
+       SUBD  ,S++
+       STD   <LPRTH
+       LDX   #KST1
+       JSR   KST3
+
+       LDA   #24
+       STA   CURSRX
+       LDX   #KST2
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #216
+       SUBD  ,S++
+       STD   <LPRTH
+       JSR   BSBOX0
+       LDX   #KST2
+       JSR   KST3
+
+* DRAW THE INITIAL DATA ON
+* THE SCREEN FROM EDITX POINTER
+* TO THE EDITED DATA.
+
+       CLRA
+       JMP   [VIEW]
+
+CLK24  CLR   CLK
+
+* MAIN LOOP *
+EDIT2  JSR   [MVEARW]
+
+       LDX   <AX
+       CMPX  #83
+       LBLO   EDIT9
+       CMPX  #305
+       LBHI   EDIT9
+       LDA   <AY
+       CMPA  #162
+       LBLO   EDIT9
+       CMPA  #172
+       LBHI   EDIT9
+* CLICKED ON A PALETTE
+
+       LDA   CLK
+       CMPA  #2
+       LBEQ  EDIT2
+
+       INC   CLK
+
+       LDD   <AX
+       SUBD  #82
+       LDY   #0
+A@     CMPD  #14
+       BLO   B@
+       LEAY  1,Y
+       SUBD  #14
+       BRA   A@
+B@     TFR   Y,D
+
+       STB   <COLOR
+       STB   <PATTRN
+       TFR   B,A
+       JSR   [SHOPAT]
+       LDA   #2
+       JSR   [PAGEIN]
+       LDA   <COLOR
+       JSR   [SHOPAT]
+       CLRA
+       JSR   [PAGEIN]
+
+       CLRA
+       LDB   #7
+       JSR   [PCOPY]
+       LDA   #7
+       JSR   [VIEW]
+
+       LDA   #8+34+1
+       STA   <BV1
+       LDA   #8+34+64+1
+       STA   <BV2
+
+       LDB   <COLOR
+       LDA   CLK
+       CMPA  #2
+       BEQ   A@
+       LDX   #96+11+1
+       STX   <BH1
+       LDX   #96+11+64
+       STX   <BH2
+       STB   CLK1
+       BRA   B@
+A@     LDX   #96+11+64+10+2
+       STX   <BH1
+       LDX   #96+11+64+10+65+1
+       STX   <BH2
+       STB   CLK2
+B@     JSR   [FILLED]
+
+       CLRA
+       JSR   [VIEW]
+
+A@     LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+
+       JMP   EDIT2
+
+* OK & CANCEL [BOX] CHECK;
+EDIT9  LDA   <AY
+       CMPA  #16*8-2
+       LBLO  EDIT2
+       CMPA  #16*8+10
+       LBHI  EDIT2
+       LDX   <AX
+       CMPX  #14*8-2
+       LBLO  EDIT2
+       CMPX  #20*8+2
+       LBLO  A@
+       CMPX  #24*8-2
+       LBLO  EDIT2
+       CMPX  #32*8+2
+       BLO   B@
+       JMP   EDIT2
+* CANCEL;
+DON2
+B@
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+* OK
+A@     LDA   CLK
+       CMPA  #2
+       LBNE  EDIT2
+
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+
+       JMP   [MYHOOK]
+
+MYHOOK RMB   2
+
+* DITHER PATTERN HOOK
+DITH   LDA   CLK1
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   CLK1L
+       LDA   CLK2
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   CLK2L
+       LDA   THEPAT
+       SUBA  #16
+       LDB   #32
+       MUL
+       ADDD  PATS
+       TFR   D,X
+
+       LDB   #4
+       PSHS  B
+A@     LDA   CLK1L
+       ORA   CLK2
+       TFR   A,B
+       STD   ,X
+       STD   2,X
+       LEAX  4,X
+       LDA   CLK2L
+       ORA   CLK1
+       TFR   A,B
+       STD   ,X
+       STD   2,X
+       LEAX  4,X
+       DEC   ,S
+       BNE   A@
+
+       LDA   THEPAT
+       STA   <PATTRN
+       JSR   [SHOPAT]
+
+       CLRA
+       LDB   <PATTRN
+       CMPB  #31
+       BLS   A@
+       LDA   #$FF
+A@     JSR   [DOPAT]
+
+       JMP   [MENU]
+
+* COPY PALETTE HOOK
+CPPH   LDX   #$FFB0
+       LDD   CLK1
+       LDA   A,X
+       STA   B,X
+       JMP   [MENU]
+
+* REMAP HOOK
+REMAPH CLRA
+       JSR   [PAGEIN]
+       JSR   [PUT]
+
+       LDA   CLK1
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   CLK1L
+
+       LDA   CLK2
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   CLK2L
+
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+
+       LDA   #1
+       LDB   #8
+       JSR   [PCOPY]
+       LDA   #1
+       JSR   [PAGEIN]
+
+       LDX   #$8000
+A@     LDA   ,X
+       ANDA  #$F0
+       CMPA  CLK1L
+       BNE   C@
+       LDA   ,X
+       ANDA  #$0F
+       ORA   CLK2L
+       STA   ,X
+C@     LDA   ,X+
+       ANDA  #$0F
+       CMPA  CLK1
+       BNE   D@
+       LDA   -1,X
+       ANDA  #$F0
+       ORA   CLK2
+       STA   -1,X
+D@     CMPX  #$8000+32000
+       BNE   A@
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JMP   [MENU]
+
+BSBOX0 LDA   CURSRX
+       LDB   #8
+       MUL
+       SUBD  #6
+       STD   <BH1
+       ADDD  #56
+       STD   <BH2
+       LDA   CURSRY
+       LDB   #8
+       MUL
+       SUBB  #2
+       STB   <BV1
+       ADDB  #10
+       STB   <BV2
+       CLRB
+       JSR   [BOX]
+
+PRETTY LDX   BH1
+       LEAX  2,X
+       STX   <LH1
+       LDX   BH2
+       LEAX  1,X
+       STX   <LH2
+       LDA   <BV2
+       INCA
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+       LDA   <BV1
+       INCA
+       INCA
+       STA   <LV1
+       LDX   <BH2
+       INX
+       STX   <LH1
+       STX   <LH2
+       JMP   [LINE]
+
+KST0   FCC   "FAST",0
+KST01  FCC   "SLOW",0
+KST1   FCC   "OK",0
+KST2   FCC   "CANCEL",0
+
+KST3   LDA   ,X+
+       BEQ   ?RTS
+       JSR   [LYNPRT]
+       BRA   KST3
+
+BUMP0  LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       INC   <BV2
+       DEC   <BV1
+       RTS
+
+       END

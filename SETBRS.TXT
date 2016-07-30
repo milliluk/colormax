@@ -1,0 +1,229 @@
+       NAM   SET BRUSH
+
+* CHANGED BBYE
+
+*
+* Set brush routine
+* Worked almost the first time!
+* Rah Rah Rah!
+*
+
+THEOV  FDB   0
+
+SETBRS CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDX   OH1
+       STX   THEOV
+       LDX   #0
+       STX   OH1
+
+       LDX   #80+16
+       STX   <BH1
+       LDX   #240+16
+       STX   <BH2
+       LDA   #48-14
+       STA   <BV1
+       LDA   #160-14
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       LDB   #15
+       JSR   [BOX]
+       JSR   BUMP
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   [BOX]
+
+       LDU   #$8000+34*160+48+8
+       LDX   #BRSHS
+       LDA   #4
+       PSHS  A
+A@     PSHS  U
+       LDA   #4
+       PSHS  A
+B@     LEAU  160*10,U
+       LDA   #8
+       PSHS  A
+C@     LDD   ,X++
+       COMA
+       COMB
+       STD   ,U
+       LDD   ,X++
+       COMA
+       COMB
+       STD   2,U
+       LEAU  160,U
+       DEC   ,S
+       BNE   C@
+       LEAS  1,S
+       LEAU  160*10,U
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       PULS  U
+       LEAU  20,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+       LDA   BNUM
+       CLRB          BLACK
+       JSR   BOXIN
+
+       BSR   MNUCLK
+       BRA   BRS99
+
+MNUCLK LDX   USESYM
+       LDU   USESY2
+       PSHS  X,U
+       LDX   USEOUT
+       LDU   USEOU2
+       PSHS  X,U
+
+       LDX   ARROW
+       STX   USESYM
+       LDX   ARR2
+       STX   USESY2
+       LDX   AROUT
+       STX   USEOUT
+       LDX   AROU2
+       STX   USEOU2
+       JSR   [MENARW]
+
+       PULS  X,U
+       STU   USEOU2
+       STX   USEOUT
+       PULS  X,U
+       STU   USESY2
+       STX   USESYM
+       RTS
+
+BRS99  LDX   <AX
+       CMPX  #80+16
+       LBLO  BBYE
+       CMPX  #255
+       LBHI  BBYE
+       LDA   <AY
+       CMPA  #48-14
+       LBLO  BBYE
+       CMPA  #160-14
+       LBHI  BBYE
+
+       CLRA
+       LDB   <AX+1
+       SUBB  #80+16
+A@     CMPB  #40
+       BLO   B@
+       ADDA  #4
+       SUBB  #40
+       BRA   A@
+B@     LDB   <AY
+       SUBB  #48-14
+
+A@     CMPB  #28
+       BLO   B@
+       SUBB  #28
+       INCA
+       BRA   A@
+B@
+
+* A=BRUSH #
+
+       CMPA  BNUM
+       BEQ   BSAME
+
+       PSHS  A
+       LDA   BNUM
+       LDB   #15
+       JSR   BOXIN
+       PULS  A
+       STA   BNUM
+       CLRB
+       JSR   BOXIN
+
+BSAME  LDX   #60000
+A@     LEAX  ,X
+       LEAX  ,X
+       DEX
+       BNE   A@
+
+BBYE   LDA   #2
+       JSR   [VIEW]
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+**:
+       JSR   SBRS2
+       LDX   THEOV
+       STX   OH1
+       JMP   [MENU]
+
+* THIS ROUTINE BOXES IN BRUSH
+* A WITH THE COLOR IN B
+BOXIN  LDX   #80+16
+       STX   <BH1
+A@     CMPA  #4
+       BLO   B@
+       LDX   <BH1
+       LEAX  40,X
+       STX   <BH1
+       SUBA  #4
+       BRA   A@
+B@     LDX   <BH1
+       LEAX  40,X
+       STX   <BH2
+       PSHS  B
+       LDB   #28
+       MUL
+       ADDB  #48-14
+       STB   <BV1
+       ADDB  #28
+       STB   <BV2
+
+       LDA   <BV1
+       ADDA  #4    2
+       STA   <BV1
+       LDA   <BV2
+       SUBA  #4
+       STA   <BV2
+
+       LDX   <BH1
+       LEAX  6,X    2
+       STX   <BH1
+       LDX   <BH2
+       LEAX  -6,X   2
+       STX   <BH2
+       PULS  B
+       JSR   [BOX]
+       JSR   BUMP
+       JMP   [BOX]
+
+BUMP   INC   <BV2
+       DEC   <BV1
+       LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       RTS
+
+* It's now only one and a half
+* weeks into this project, and
+* I admit I find myself going
+* ga-ga.  Must finish soon.
+
+*<little note from Greg>
+*The project is near completion,
+*and I've GONE ga-ga.
+
+       END
+
+

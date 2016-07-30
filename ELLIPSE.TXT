@@ -1,0 +1,780 @@
+* SUGGESTED DP STUFF:
+* SXA,BXA (2)
+* SYA,BYA (1)
+* X,X0,X1,X2 (2)
+* Y,Y0,Y1,Y2 (1)
+* AS,BS (4)
+
+       NAM   ELLIPSE
+
+PUSH   MACR
+       PSHS  A,DP,X,Y,U
+       ENDM
+
+       INCL  DEFS.TXT :7
+       INCL  LOWDEFS.TXT :7
+
+       ORG   $6000
+       FDB   RR1,RR2,ELL1,ELL2
+
+* DRAW AN ELLIPSE
+* CENTER (X0,Y0)
+* RX AND RY ARE 16 BIT
+*  X AND Y RADII (NOT RADIUSES)
+* IF RX=RY, THEN A CIRCLE IS
+* DRAWN
+ELLPSE
+       LDX   RY
+       BEQ   ?RTS
+       LDX   RX
+       BEQ   ?RTS
+
+       LDA   PATTRN
+       CMPA  #16
+       BHS   A@
+       LDU   #TBL9
+       LDA   A,U
+       TFR   A,B
+       TFR   D,X
+       STX   LNSTUF
+       STX   LNSTUF+2
+       STX   LNSTUF+4
+       STX   LNSTUF+6
+       STX   LNSTUF+8
+       STX   LNSTUF+10
+       LDX   RX
+A@
+
+       CLR   Y
+       STX   X
+       STX   <N1
+       STX   <N2
+       LDX   #T11
+       JSR   MUL32 <T11=RX*RX
+
+* <T22=T11*2
+       LDX   <T11
+       STX   <T22
+       LDX   <T11+2
+       STX   <T22+2
+       LSL   <T22+3
+       ROL   <T22+2
+       ROL   <T22+1
+       ROL   <T22
+
+* <T3=T22*2
+       LDX   <T22
+       STX   <T3
+       LDX   <T22+2
+       STX   <T3+2
+       LSL   <T3+3
+       ROL   <T3+2
+       ROL   <T3+1
+       ROL   <T3
+
+* <T4=RY*RY
+       LDX   RY
+       STX   <N1
+       STX   <N2
+       LDX   #T4
+       JSR   MUL32
+
+* <T5=T4*2
+       LDX   <T4
+       STX   <T5
+       LDX   <T4+2
+       STX   <T5+2
+       LSL   <T5+3
+       ROL   <T5+2
+       ROL   <T5+1
+       ROL   <T5
+
+* <T6=T5*2
+       LDX   <T5
+       STX   <T6
+       LDX   <T5+2
+       STX   <T6+2
+       LSL   <T6+3
+       ROL   <T6+2
+       ROL   <T6+1
+       ROL   <T6
+
+* <T7=RX*T5
+       LDX   <T5+2
+       STX   <N1
+       LDX   RX
+       STX   <N2
+       LDX   #T7
+       JSR   MUL32
+
+* <T8=T7*2
+       LDX   <T7
+       STX   <T8
+       LDX   <T7+2
+       STX   <T8+2
+       LSL   <T8+3
+       ROL   <T8+2
+       ROL   <T8+1
+       ROL   <T8
+
+* <T9=0
+       LDX   #0
+       STX   <T9
+       STX   <T9+2
+
+* <D1=T22-T7+T4/2
+       LDX   <T7
+       STX   BS
+       LDX   <T7+2
+       STX   BS+2
+       LDX   #BS
+       JSR   NEG32
+
+       LDY   #T22
+       LDU   #D1
+       JSR   ADD32
+       LDX   <D1
+       STX   BS
+       LDX   <D1+2
+       STX   BS+2
+
+       LDX   <T4
+       STX   AS
+       LDX   <T4+2
+       STX   AS+2
+       LSR   AS
+       ROR   AS+1
+       ROR   AS+2
+       ROR   AS+3
+
+       LDX   #BS
+       LDY   #AS
+       LDU   #D1
+       JSR   ADD32
+
+* <D2=T5-T8+T11/2
+       LDX   <T8
+       STX   BS
+       LDX   <T8+2
+       STX   BS+2
+       LDX   #BS
+       JSR   NEG32
+       LDY   #T5
+       LDU   #D2
+       JSR   ADD32
+       LDX   <D2
+       STX   BS
+       LDX   <D2+2
+       STX   BS+2
+       LDX   <T11
+       STX   AS
+       LDX   <T11+2
+       STX   AS+2
+       LSR   AS
+       ROR   AS+1
+       ROR   AS+2
+       ROR   AS+3
+       LDX   #BS
+       LDY   #AS
+       LDU   #D2
+       JSR   ADD32
+
+* MAIN LOOP - QUICKLY GENERATES
+* (X,Y) POINTS OF THE ELLIPSE
+LN1070 LDA   <D2
+       LBPL  LN1500
+
+       JSR   LN2000
+
+* Y=Y+1
+       INC   Y
+* <T9=T9+T3
+       LDX   #T9
+       LDY   #T3
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <T9
+       LDX   BS+2
+       STX   <T9+2
+
+       LDA   <D1
+       LBPL  A@
+* D1< 0
+*
+* D1=D1+T9+T22
+       LDX   #D1
+       LDY   #T9    <D1+T9
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T22     +T2
+       LDU   #D1    = <D1
+       JSR   ADD32
+* <D2=D2+T9
+       LDX   #D2
+       LDY   #T9
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <D2
+       LDX   BS+2
+       STX   <D2+2
+       JMP   LN1070
+A@
+* ELSE:
+       LDD   X
+       SUBD  #1    X=X-1
+       STD   X
+* <T8=T8-T6
+       LDX   <T6
+       STX   BS
+       LDX   <T6+2
+       STX   BS+2
+       LDX   #BS
+       JSR   NEG32
+       LDY   #T8
+       LDU   #AS
+       JSR   ADD32
+       LDX   AS
+       STX   <T8
+       LDX   AS+2
+       STX   <T8+2
+* <T0=T9-T8
+       LDX   #AS
+       JSR   NEG32
+       LDY   #T9
+       LDU   #T0
+       JSR   ADD32
+* <D1=D1+T0+T22
+       LDX   #D1
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T22
+       LDU   #D1
+       JSR   ADD32
+* <D2=D2+T0+T5
+       LDX   #D2
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T5
+       LDU   #D2
+       JSR   ADD32
+       JMP   LN1070
+
+LN1500 JSR   LN2000
+
+       LDD   X
+       SUBD  #1  X=X-1
+       STD   X
+
+* <T8=T8-T6
+       LDX   <T6
+       STX   AS
+       LDX   <T6+2
+       STX   AS+2
+       LDX   #AS
+       JSR   NEG32
+       LDY   #T8
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <T8
+       LDX   BS+2
+       STX   <T8+2
+
+       LDX   #BS
+       JSR   NEG32
+       LDY   #T5
+       LDU   #T0
+       JSR   ADD32
+
+       LDA   <D2
+       LBPL  A@
+*
+B@     INC   Y   Y=Y+1
+* <T9=T9+T3
+       LDX   #T9
+       LDY   #T3
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <T9
+       LDX   BS+2
+       STX   <T9+2
+* <D2=D2+T0+T9
+       LDX   #D2
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T9
+       LDU   #D2
+       JSR   ADD32
+       BRA   LN1540  SKIP ELSE
+* ELSE <D2=D2+T0
+A@     LDX   #D2
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <D2
+       LDX   BS+2
+       STX   <D2+2
+
+LN1540 LDA   X   IF X>=0
+       LBPL  LN1500
+
+       RTS
+
+ELHK   RMB   2 HOOK FOR FILL/NOT
+
+TBL9   FCB   $00,$11,$22,$33
+       FCB   $44,$55,$66,$77
+       FCB   $88,$99,$AA,$BB
+       FCB   $CC,$DD,$EE,$FF
+
+LN2000 LDA   Y0    Y1=Y0+Y
+       ADDA  Y
+       CMPA  SYA
+       BHS   A@
+       LDA   SYA
+A@     CMPA  BYA
+       BLS   B@
+       LDA   BYA
+B@     STA   Y1
+       STA   <LV1
+       STA   <LV2
+
+       LDA   Y0    Y2=Y0-Y
+       SUBA  Y
+       CMPA  SYA
+       BHS   A@
+       LDA   SYA
+A@     CMPA  BYA
+       BLS   B@
+       LDA   BYA
+B@     STA   Y2
+
+       LDD   X0    X1=X0+X
+       ADDD  X
+       TFR   D,X
+       CMPX  SXA
+       BHS   A@
+       LDX   SXA
+A@     CMPX  BXA
+       BLS   B@
+       LDX   BXA
+B@     STX   X1
+       STX   <LH1
+       STX   <LH2
+
+       LDD   X0    X2=X0-X
+       SUBD  X
+       TFR   D,X
+       CMPX  SXA
+       BHS   A@
+       LDX   SXA
+A@     CMPX  BXA
+       BLS   B@
+       LDX   BXA
+B@     STX   X2
+
+       LDB   COLOR
+       JMP   [ELHK]
+
+ARCHK  LDX   <AX
+       CMPX  STX
+       BLO   A@
+       JSR   [LINE]
+       LDA   Y2
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]
+A@     LDX   X2
+       STX   <LH1
+       STX   <LH2
+       JSR   [LINE]
+       LDA   Y2
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]
+
+* SET POINTS ON SCREEN
+ELHK4  LDA   ARCFL
+       BNE   ARCHK
+       JSR   [LINE]   (X1,Y1)
+       LDA   Y2
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]   (X1,Y2)
+       LDX   X2
+       STX   <LH1
+       STX   <LH2
+       JSR   [LINE]   (X2,Y2)
+       LDA   Y1
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]   (X2,Y1)
+
+* FILL-IN AREA AND THEN CALL
+* ELHK4 TO OUTLINE IN BLACK
+*
+* LV1,V2=Y1
+* LH1,H2=X1
+ELHK5  LDB   PATTRN
+
+       LDX   X2
+       STX   <LH1
+*      LDX   X1
+*      STX   <LH2
+
+*      LDA   Y1
+*      STA   <LV1
+       JSR   HLINE
+
+       LDA   Y2
+       STA   <LV1
+       JSR   HLINE
+
+       LDA   Y1
+       STA   <LV1
+*      STA   <LV2
+       LDX   X1
+       STX   <LH1
+*      STX   <LH2
+       CLRB
+       JMP   ELHK4
+
+LNSTUF RMB   12
+HLINE  PSHS  B
+       CLR   DOT1
+       LDX   <LH1
+       CMPX  <LH2
+       BNE   A@
+       COM   DOT1
+A@
+
+       CMPB  #16
+       BLO   HLN2
+
+* HORIZONTAL [LINE] W/ PATTERNS
+
+       SUBB  #16
+       LDA   #32
+       MUL
+       ADDD  PATS
+       TFR   D,U
+
+       LDA   <LV1
+       ANDA  #7
+       BEQ   B@
+A@     LEAU  4,U
+       DECA
+       BNE   A@
+B@     LDX   ,U
+       STX   LNSTUF
+       STX   LNSTUF+4
+       STX   LNSTUF+8
+       LDX   2,U
+       STX   LNSTUF+2
+       STX   LNSTUF+6
+       STX   LNSTUF+10
+
+HLN2   LDU   #LNSTUF
+       LDD   <LH1
+       ANDB  #$FE
+       PSHS  D
+       LDD   <LH2
+       ANDB  #$FE
+       SUBD  ,S++
+       LSRA
+       RORB
+       DECB
+       CMPB  #160
+       BLO   A@
+       CLRB
+A@     STB   BYTES
+
+       LDX   #$8000
+       LDD   <LH1
+       LSRA
+       RORB
+       PSHS  B
+       ABX
+       LDA   <LV1
+       LDB   #160
+       MUL
+       LEAX  D,X
+
+       LDB   ,S
+       ANDB  #3
+
+* X=SCREEN ADDRESS
+* U=PATTERN POINTER
+* BYTES = #/BYTES
+* B=INITIAL INDEX INTO PATTERN
+
+       LDA   B,U
+       LDB   <LH1+1
+       ANDB  #1
+       BEQ   A@
+       ANDA  #$0F
+       PSHS  A
+       LDA   ,X
+       ANDA  #$F0
+       ORA   ,S+
+       BRA   B@
+A@     TST   DOT1
+       BEQ   B@
+* SPECIAL CASE: JUST SET ONE DOT
+       ANDA  #$F0
+       PSHS  A
+       LDA   ,X
+       ANDA  #$0F
+       ORA   ,S++
+       STA   ,X
+       JMP   ASSH
+* OTHERWISE:
+B@     STA   ,X+
+       PULS  B
+
+       INCB
+       ANDB  #3
+
+* FAST HORIZONTAL BYTE FILL
+* USING STACKS
+
+       LEAU  B,U
+       PSHS  DP
+       STS   OLDS
+
+       TFR   X,S
+
+       PULU  A,DP,X,Y
+       LDU   ,U
+
+       LDB   BYTES
+
+* B=# BYTES
+* S=SCREEN ADDRESS
+* A,DP,X,Y,U = 8 BYTES OF
+*   COLOR OR PATTERN JUSTIFIED
+*   FOR USE ON THE SCREEN
+
+       CMPB  #32
+       BLO   B@
+A@     LEAS  8,S
+       PUSH
+       LEAS  16,S
+       PUSH
+       LEAS  16,S
+       PUSH
+       LEAS  16,S
+       PUSH
+       LEAS  8,S
+       SUBB  #32
+       CMPB  #32
+       BHS   A@
+B@     CMPB  #16
+       BLO   C@
+       LEAS  8,S
+       PUSH
+       LEAS  16,S
+       PUSH
+       LEAS  8,S
+       SUBB  #16
+C@     CMPB  #8
+       BLO   D@
+       LEAS  8,S
+       PUSH
+       LEAS  8,S
+       SUBB  #8
+D@     LSLB
+       STU   OLDU
+       LDU   #FTBL
+       JMP   [B,U]
+
+FTBL   FDB   Z@,A@,B@,C@,D@,E@
+       FDB   F@,G@
+*
+A@     STA   ,S
+       LEAS  1,S
+       BRA   Z@
+B@     LEAS  2,S
+       PSHS  A,DP
+       LEAS  2,S
+       BRA   Z@
+C@     LEAS  3,S
+       STX   TEMP
+       LDB   TEMP
+       STB   ,-S
+       PSHS  A,DP
+       LEAS  3,S
+       BRA   Z@
+D@     LEAS  4,S
+       PSHS  A,DP,X
+       LEAS  4,S
+       BRA   Z@
+E@     LEAS  5,S
+       STY   TEMP
+       LDB   TEMP
+       STB   ,-S
+       PSHS  A,DP,X
+       LEAS  5,S
+       BRA   Z@
+F@     LEAS  6,S
+       PSHS  A,DP,X,Y
+       LEAS  6,S
+       BRA   Z@
+G@     LEAS  7,S
+       LDB   OLDU
+       STB   ,-S
+       PSHS  A,DP,X,Y
+       LEAS  7,S
+Z@     TFR   S,X
+       LDS   OLDS
+       PULS  DP
+
+* STACK AND DP ARE NOW RESTORED;
+* CONTINUE WITH THE MAIN ROUTINE
+
+       LDD   <LH2
+       SUBD  <LH1
+       CMPD  #1
+       BLS   ASSH
+
+       LDD   <LH2
+       LSRA
+       RORB
+       ANDB  #3
+       LDU   #LNSTUF
+
+       LDA   B,U
+       LDB   <LH2+1
+       ANDB  #1
+       BNE   A@
+       ANDA  #$F0
+       PSHS  A
+       LDA   ,X
+       ANDA  #$0F
+       ORA   ,S+
+A@     STA   ,X
+
+ASSH   PULS  B,PC
+
+OLDS   RMB   2 TO RESTORE STACK
+OLDU   RMB   2 TO GRAB LOW-U
+TEMP   RMB   2 TO GRAB LOW-X,Y
+
+***** 32 BIT MATH ROUTINES *****
+** NEGATE, ADD, AND MULTIPLY ***
+
+* MAKES ,X NEGATIVE
+NEG32  COM   3,X
+       COM   2,X
+       COM   1,X
+       COM   ,X
+
+       INC   3,X
+       BVC   A@
+       INC   2,X
+       BVC   A@
+       INC   1,X
+       BVC   A@
+       INC   ,X
+A@     RTS
+
+* ADDS ,X + ,Y  = ,U
+* ALL REGS POINT TO 32 BIT #'S
+ADD32  LDA   3,X
+       ADDA  3,Y
+       STA   3,U
+       LDA   2,X
+       ADCA  2,Y
+       STA   2,U
+       LDA   1,X
+       ADCA  1,Y
+       STA   1,U
+       LDA   ,X
+       ADCA  ,Y
+       STA   ,U
+
+       RTS
+
+MULZER PULS  X
+       LDD   #0
+       STD   ,X
+       STD   2,X
+       RTS
+
+* MULTIPLIES <N1 * <N2, PUTS
+* RESULT ,X
+* <N1, <N2 ARE 16 BITS
+* ,X 32 BIT RESULT
+MUL32  PSHS  X
+
+       LDX   <N1
+       BEQ   MULZER
+       LDY   <N2
+       BEQ   MULZER
+
+       LDD   #0
+       STD   <P1
+       STD   <P3
+       STY   <M3
+A@     LDA   <P4
+       ADDA  <M4
+       STA   <P4
+       LDA   <P3
+       ADCA  <M3
+       STA   <P3
+       LDA   <P2
+       ADCA  #0
+       STA   <P2
+       LDA   <P1
+       ADCA  #0
+       STA   <P1
+       DEX
+       BNE   A@
+
+       PULS  X
+       LDA   <P1
+       STA   ,X
+       LDA   <P2
+       STA   1,X
+       LDA   <P3
+       STA   2,X
+       LDA   <P4
+       STA   3,X
+
+       RTS
+
+SXA    RMB   2
+SYA    RMB   1
+BXA    RMB   2
+BYA    RMB   1
+
+X      RMB   2
+X0     RMB   2
+X1     RMB   2
+X2     RMB   2
+Y      RMB   1
+Y0     RMB   1
+Y1     RMB   1
+Y2     RMB   1
+RX     RMB   2
+RY     RMB   2
+
+AS     RMB   4
+BS     RMB   4
+
+DOT1   FCB   0
+
+       INCL  ELLIPSES.TXT :6
+
+       END

@@ -1,0 +1,140 @@
+       NAM   LOAD128
+* LOAD 128X128 DS-69 PIX
+* USES A 2X2 DITHER
+
+DS69   LDA   #1
+       JSR   [PAGEIN]
+
+       LDX   #$8000
+       LDD   #$FFFF
+A@     STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       CMPX  #$8000+160*200
+       BLO   A@
+
+       LDX   #$8000+16
+A@     LDU   #BUF
+B@     JSR   [GETBYT]
+       STA   ,U+
+       CMPU  #BUF+128
+       BNE   B@
+*
+       LDU   #BUF+7
+       LDY   #DTBL
+       PSHS  X
+C@     LDA   ,U
+       COMA
+       ANDA  #$F0
+       LSRA
+       LSRA
+       LSRA
+       LDD   A,Y
+       STA   ,X
+       STB   160,X
+*
+       LDB   64,U
+       COMB
+       ANDB  #$F0
+       LSRB
+       LSRB
+       LSRB
+       LDD   B,Y
+       STA   1,X
+       STB   161,X
+       LEAX  320,X
+*
+       LDA   ,U+
+       COMA
+       ANDA  #$0F
+       LSLA
+       LDD   A,Y
+       STA   ,X
+       STB   160,X
+*
+       LDB   63,U
+       COMB
+       ANDB  #$0F
+       LSLB
+       LDD   B,Y
+       STA   1,X
+       STB   161,X
+       LEAX  320,X
+       CMPU  #BUF+64-7
+       LBNE  C@
+*
+       PULS  X
+       LEAX  2,X
+       CMPX  #$8000+128+16
+       LBLO  A@
+
+       LDA   #$FF
+       STA   <FLNAMD
+       LDX   TITLE
+       LDU   #DSTIT
+A@     LDD   ,U++
+       STD   ,X++
+       CMPU  #DSTIT+30
+       BNE   A@
+
+* SETUP PALETTES *
+       LDX   #RGBCMP
+       CLR   $FFB0
+       LDA   #%00000111
+       BSR   CNV
+       STA   $FFB1
+       LDA   #%00111000
+       BSR   CNV
+       STA   $FFB2
+       LDA   #63
+       STA   $FFBF
+       STA   $FF9A
+
+       JMP   AFTLD
+
+CNV    TST   $E00
+       BEQ   ?RTS
+       LDA   A,X
+       RTS
+
+DSTIT  FCC   /DS-69 Picture/
+       BSZ   19
+
+*DITHER TABLE
+DTBL   FCB   %00000000 BB
+       FCB   %00000000    BB
+       FCB   %00000000 BB
+       FCB   %00000001    BD
+       FCB   %00000001 BD
+       FCB   %00010000    DB
+       FCB   %00010000 DB
+       FCB   %00000001    BD
+       FCB   %00000001 BD
+       FCB   %00010001    DD
+       FCB   %00010001 DD
+       FCB   %00010001    DD
+       FCB   %00010001 DD
+       FCB   %00100001    LD
+       FCB   %00010010 DL
+       FCB   %00100001    LD
+       FCB   %00100001 LD
+       FCB   %00010010    DL
+       FCB   %00010010 DL
+       FCB   %00100010    LL
+       FCB   %00100010 LL
+       FCB   %00100010    LL
+       FCB   %00100010 LL
+       FCB   %00101111    LW
+       FCB   %00101111 LW
+       FCB   %11110010    WL
+       FCB   %11110010 WL
+       FCB   %00101111    LW
+       FCB   %00101111 LW
+       FCB   %11111111    WW
+       FCB   %11111111 WW
+       FCB   %11111111    WW
+
+BUF    RMB   128
+
+       END

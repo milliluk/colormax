@@ -1,0 +1,596 @@
+       NAM   BRUSH
+
+* "AVOID TEMPORARY VARIABLES
+*  AND STRANGE WOMEN."
+
+TASK0  EQU   %01000000
+TASK1  EQU   %01000001
+
+       INCL  DEFS.TXT :7
+       INCL  LOWDEFS.TXT :7
+
+       ORG   $6000
+
+       FDB   SBRUSH
+       FDB   BRUSH
+       FDB   SETBRS
+       FDB   SETBMH
+       FDB   SETBMV
+       FDB   EDBR
+       FDB   EDPT
+       FDB   SSPR
+       FDB   SPRAY
+
+BNUM   FCB   11 Brush num 0-15
+BMH    FCB   $FF 0=MIRROR H
+BMV    FCB   $FF 0=MIRROR V
+BRX1   FDB   0
+BRX2   FDB   0
+BRY1   FCB   0
+BRY2   FCB   0
+OLDX   FDB   0
+OLDY   FCB   0
+
+** THIS ROUTINE SETS UP THE
+*  MASKS FOR THE BRUSH ROUTINE
+**
+SBRUSH LDX   ZEROES
+       STX   <USEOUT
+       STX   <USEOU2
+       LDX   BMASK
+       STX   <USESYM
+       LDX   BMASK2
+       STX   <USESY2
+       LDD   #0000
+       STD   <GPNT
+       JSR   SBRS2
+
+       JMP   [MENU]
+
+* TOP JUSTIFY
+TOTOP  PSHS  X
+       CLR   BLANK
+       LDA   #8
+       PSHS  A
+A@     LDD   ,X
+       BNE   B@
+       LDD   2,X
+       BNE   B@
+       INC   BLANK
+       LEAX  8,X
+       DEC   ,S
+       BNE   A@
+B@     LEAS  1,S
+       PULS  X
+
+       LDA   #8
+       SUBA  BLANK
+       STA   LENBRS
+
+       LDA   BLANK
+       BEQ   ?RTS
+       CMPA  #8
+       BEQ   ?RTS
+
+       LDA   LENBRS
+       PSHS  A
+       LDA   BLANK
+       LDB   #8
+       MUL
+       LEAU  D,X
+* X=TOP OF BRUSH
+* U=ACTUAL PLACE BRUSH STARTS
+A@     LDD   ,U
+       STD   ,X
+       LDD   2,U
+       STD   2,X
+       LEAX  8,X
+       LEAU  8,U
+       DEC   ,S
+       BNE   A@
+
+       LDA   BLANK
+       STA   ,S
+       LDD   #0
+A@     STD   ,X
+       STD   2,X
+       LEAX  8,X
+       DEC   ,S
+       BNE   A@
+
+       LDA   #8
+       STA   LENBRS
+A@     LEAX  -8,X
+       LDD   ,X
+       BNE   B@
+       LDD   2,X
+       BNE   B@
+       DEC   LENBRS
+       BRA   A@
+B@     PULS  A,PC
+
+* LEFT JUSTIFY
+TOLEFT PSHS  X
+
+       LDA   #8
+       PSHS  A
+A@     CLRB
+B@     LDA   #$F0
+       ANDA  B,X
+       BNE   D@
+       ADDB  #8
+       CMPB  #64
+       BNE   B@
+       JSR   SHF4
+       DEC   ,S
+       BNE   A@
+D@     LEAS  1,S
+
+       PULS  X
+       LEAX  3,X
+
+       LDA   #8
+       STA   WDTBRS+1
+
+       LDA   #4
+       PSHS  A
+A@     CLRB
+B@     LDA   #$0F
+       ANDA  B,X
+       BNE   D@
+       ADDB  #8
+       CMPB  #64
+       BNE   B@
+       DEC   WDTBRS+1
+       CLRB
+C@     LDA   #$F0
+       ANDA  B,X
+       BNE   D@
+       ADDB  #8
+       CMPB  #64
+       BNE   C@
+       DEC   WDTBRS+1
+       LEAX  -1,X
+       DEC   ,S
+       BNE   A@
+D@     PULS  A,PC
+
+* SHIFT 4 BITS LEFT
+SHF4   PSHS  A,X
+       LDA   #8
+A@     LDB   #4
+B@     LSL   4,X
+       ROL   3,X
+       ROL   2,X
+       ROL   1,X
+       ROL   ,X
+       DECB
+       BNE   B@
+       LEAX  8,X
+       DECA
+       BNE   A@
+       PULS  A,X,PC
+
+BLANK  FCB   0 TEMP VAR
+LENBRS FCB   0 LENGTH OF BRUSH
+WDTBRS FDB   0 WIDTH OF BRUSH
+
+SBRS2  LDA   BNUM
+       LDB   #32
+       MUL
+       ADDD  #BRSHS
+       TFR   D,X
+* X POINTS TO A 4 X 8 BYTE BRUSH
+
+* CLEAR THE CURSOR HOLDERS
+       LDA   #4*9*2
+       PSHS  A
+       LDU   BMASK
+       LDD   #0
+A@     STD   ,U++
+       STD   ,U++
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+* COPY THE 4 X 8 TO AN 8 X 8
+* ARRAY FOR THE CURSOR ROUTINE
+       LDU   BMASK
+       LDY   #8
+A@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LEAU  4,U
+       LEAY  -1,Y
+       BNE   A@
+
+* TOP AND LEFT JUSTIFY IT
+       LDX   BMASK
+       JSR   TOTOP  JUSTIFY IT
+       LDX   BMASK
+       JSR   TOLEFT
+
+* COPY TO ANOTHER CURSOR ARRAY
+* SO IT CAN BE ROTATED FOR ODD
+* PIXELS
+       LDX   BMASK
+       LDU   BMASK2
+       PSHS  U
+       LDA   #16
+       PSHS  A
+A@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+* AND ROTATE IT
+       PULS  U
+       LDA   #8
+A@     LDB   #4
+B@     LSR   ,U
+       ROR   1,U
+       ROR   2,U
+       ROR   3,U
+       ROR   4,U
+       DECB
+       BNE   B@
+       LEAU  8,U
+       DECA
+       BNE   A@
+
+       RTS
+
+BRUSH  JSR   [PTSHIT]
+
+       LDA   #2
+       JSR   [PAGEIN]
+
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   $FFA4
+       STX   $FFAC
+       LDX   $FFA6
+       STX   $FFAE
+
+       CLRA
+       JSR   [PAGEIN]
+
+       LDA   #155
+       SUBA  LENBRS
+       STA   MAXBV1+1
+       STA   MAXBV2+1
+       STA   MAXBV3+1
+
+       LDD   #310
+       SUBD  WDTBRS
+       STD   MAXBH1+1
+       STD   MAXBH2+1
+       STD   MAXBH3+1
+
+* MAP 0 = PAGE 0 (WINDOW)
+* MAP 1 = PAGE 2 (FILLED W/ PAT)
+
+       BRA   BR15
+BR1    JSR   [DRWARW]
+BR15
+
+       LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       JSR   [RPLARW]
+       JMP   [MENU]
+A@     JSR   [JOYSTK]
+
+       LDX   <JOYX
+       CMPX  #44
+       BHS   A@
+       LDX   #44
+       STX   <JOYX
+MAXBH1
+A@     CMPX  #310-8
+       BLS   B@
+MAXBH2
+       LDX   #310-8
+       STX   <JOYX
+B@     LDA   <JOYY
+       CMPA  #24
+       BHS   C@
+       LDA   #24
+       STA   <JOYY
+MAXBV1
+C@     CMPA  #155-8
+       BLS   D@
+MAXBV2
+       LDA   #155-8
+       STA   <JOYY
+D@
+
+       LDX   <JOYX
+       CMPX  OLDX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  OLDY
+       LBEQ  BR15
+A@     STX   OLDX
+       LDA   <JOYY
+       STA   OLDY
+
+       PSHS  A,X
+       JSR   [RPLARW]
+       JSR   BR2
+       PULS  A,X
+       STA   <AY
+       STX   <AX
+
+       TST   BMH
+       BEQ   A@
+       TST   BMV
+       LBNE  BR1
+A@
+
+       LDX   <JOYX
+       STX   BRX1
+       LDA   <JOYY
+       STA   BRY1
+
+       LDD   <JOYX
+       SUBD  #44
+       PSHS  D
+MAXBH3
+       LDD   #310-8
+       SUBD  ,S++
+       STD   BRX2
+
+       LDA   <JOYY
+       SUBA  #24
+       PSHS  A
+MAXBV3
+       LDA   #155-8
+       SUBA  ,S+
+       STA   BRY2
+
+       TST   BMH
+       BNE   A@
+       LDX   BRX2
+       STX   <JOYX
+       BSR   BR2
+A@     TST   BMV
+       LBNE  BR1
+
+       LDA   BRY2
+       STA   <JOYY
+       BSR   BR2
+
+       TST   BMH
+       LBNE  BR1
+
+       LDX   BRX1
+       STX   <JOYX
+       BSR   BR2
+
+       JMP   BR1
+
+* THIS ROUTINE SETS THE BRUSH
+* AT <JOYX, <JOYY
+BR2    LDA   <JOYY
+       LDB   #160
+       MUL
+       ADDA  #$80
+       TFR   D,X
+       LDD   <JOYX
+       LSRA
+       RORB
+       ABX
+       TFR   X,U
+
+* POINT X TO THE PROPERLY
+* ROTATED BIT MASK
+       LDX   BMASK
+       LDA   <JOYX+1
+       ANDA  #1
+       BEQ   A@
+       LDX   BMASK2
+A@
+
+       LDA   #8
+       PSHS  A
+A@     LDA   #5
+       PSHS  A
+B@     LDA   #TASK1
+       STA   $FF91
+       LDA   ,X+
+       TFR   A,B
+       COMB
+       ANDA  ,U
+       PSHS  A
+       LDA   #TASK0
+       STA   $FF91
+       ANDB  ,U
+       ORB   ,S+
+       STB   ,U+
+*
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       LEAU  155,U
+       LEAX  3,X
+       DEC   ,S
+       BNE   A@
+
+       PULS  A,PC
+
+SETBMH COM   BMH
+       LDX   PBMH
+       JSR   [TOGCHK]
+       JMP   [MENU]
+
+SETBMV COM   BMV
+       LDX   PBMV
+       JSR   [TOGCHK]
+       JMP   [MENU]
+
+SSPR   LDX   SPCAN
+       STX   <USESYM
+       STX   <USESY2
+       LDX   ZEROES
+       STX   <USEOUT
+       STX   <USEOU2
+       LDD   #0000
+       STD   <GPNT
+
+       LDX   SPCAN
+       LDU   BMASK
+       LDY   BMASK2
+A@     LDD   ,X++
+       STD   ,U++
+       STD   ,Y++
+       LDD   ,X++
+       STD   ,U++
+       STD   ,Y++
+       LDD   ,X++
+       STD   ,U++
+       STD   ,Y++
+       LDD   ,X++
+       STD   ,U++
+       STD   ,Y++
+       CLR   ,U+
+       CLR   ,Y+
+       CMPX  EPOL
+       BNE   A@
+
+       LDU   BMASK2
+       LDA   #16
+A@     LDB   #4
+B@     LSR   ,U
+       ROR   1,U
+       ROR   2,U
+       ROR   3,U
+       ROR   4,U
+       ROR   5,U
+       ROR   6,U
+       ROR   7,U
+       ROR   8,U
+       DECB
+       BNE   B@
+       LEAU  5,U
+       DECA
+       BNE   A@
+
+       JMP   [MENU]
+
+SPRAY  JSR   [PTSHIT]
+
+       LDA   #2
+       JSR   [PAGEIN]
+
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   $FFA4
+       STX   $FFAC
+       LDX   $FFA6
+       STX   $FFAE
+
+       CLRA
+       JSR   [PAGEIN]
+
+SP1    LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       JSR   [RPLARW]
+       JMP   [MENU]
+A@     JSR   [JOYSTK]
+
+       LDX   <JOYX
+       CMPX  #44
+       BHS   A@
+       LDX   #44
+       STX   <JOYX
+A@     CMPX  #309-16
+       BLS   B@
+       LDX   #309-16
+       STX   <JOYX
+B@     LDA   <JOYY
+       CMPA  #24
+       BHS   C@
+       LDA   #24
+       STA   <JOYY
+C@     CMPA  #155-16
+       BLS   D@
+       LDA   #155-16
+       STA   <JOYY
+D@
+
+       LDX   <JOYX
+       CMPX  OLDX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  OLDY
+       LBEQ  SP1
+A@     STX   OLDX
+       LDA   <JOYY
+       STA   OLDY
+
+       PSHS  A,X
+       JSR   [RPLARW]
+       JSR   DOSP
+       PULS  A,X
+       STA   <AY
+       STX   <AX
+       JSR   [DRWARW]
+       JMP   SP1
+
+DOSP   LDA   <JOYY
+       LDB   #160
+       MUL
+       ADDA  #$80
+       TFR   D,X
+       LDD   <JOYX
+       LSRA
+       RORB
+       ABX
+       TFR   X,U
+
+       LDX   BMASK
+       LDA   <JOYX+1
+       ANDA  #1
+       BEQ   A@
+       LDX   BMASK2
+A@
+
+       LDA   #16
+       PSHS  A
+A@     LDA   #9
+       PSHS  A
+B@     LDA   #TASK1
+       STA   $FF91
+       LDA   ,X+
+       TFR   A,B
+       COMB
+       ANDA  ,U
+       PSHS  A
+       LDA   #TASK0
+       STA   $FF91
+       ANDB  ,U
+       ORB   ,S+
+       STB   ,U+
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       LEAU  151,U
+       DEC   ,S
+       BNE   A@
+       PULS  A,PC
+
+       INCL  SETBRS.TXT :5
+       INCL  BRUSHES.TXT :5
+       INCL  EDITOR.TXT :5
+
+       END

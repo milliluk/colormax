@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "colormax", "colormax.vcxproj", "{1601C105-D855-490E-9B47-87C3C41D713D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1601C105-D855-490E-9B47-87C3C41D713D}.Debug|x86.ActiveCfg = Debug|Win32
+		{1601C105-D855-490E-9B47-87C3C41D713D}.Debug|x86.Build.0 = Debug|Win32
+		{1601C105-D855-490E-9B47-87C3C41D713D}.Release|x86.ActiveCfg = Release|Win32
+		{1601C105-D855-490E-9B47-87C3C41D713D}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

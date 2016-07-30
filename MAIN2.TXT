@@ -1,0 +1,673 @@
+       NAM   MAIN2
+
+TITNME FCC /TITLEPGEMGE/
+
+CHKMRK FCB   %11111111
+       FCB   %11111111
+       FCB   %11111100
+       FCB   %11111001
+       FCB   %01110011
+       FCB   %00100111
+       FCB   %10001111
+       FCB   %11011111
+
+*8 DOTS
+MRKWHR FDB   $8000+(137*160)+5
+       FDB   $8000+(144*160)+5
+       FDB   $8000+(152*160)+5
+       FDB   $8000+(162*160)+5
+       FDB   $8000+(172*160)+5
+
+PUTMRK LDX   #10
+       STX   <BH1
+       LDX   #19
+       STX   <BH2
+       LDA   #137
+       STA   <BV1
+       LDA   #184
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       LDX   #MRKWHR
+       LDA   WIDTH2
+       INCA
+       LSLA
+       LDU   A,X
+       LDX   #CHKMRK
+       LDB   #8
+       PSHS  B
+A@     LDA   ,X+
+       JSR   CHR2
+       LEAU  160,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+WTBUT  LDA   $FF00
+       BITA  #1
+       BEQ   WTBUT
+       LDX   #2000 BOUNCE DELAY
+A@     DEX
+       BNE   A@
+       LDA   $FF00
+       BITA  #1
+       BEQ   WTBUT
+       RTS
+
+SHOTIT LDA   #13
+       STA   <LV1
+       STA   <LV2
+       LDX   #44
+       STX   <LH1
+       LDX   #309
+       STX   <LH2
+       LDA   #4
+       PSHS  A
+A@     CLRB
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       LDB   #15
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+TITLE  FCC /Untitled/,0
+       FCB   13
+
+MENU   JMP   MENU  JMP
+
+TYPIN2 FCB   0
+UPDMDE FCB   0
+
+WIDTH2 FCB   0
+ERCOL2 FCB   15
+
+OTTHR  FDB   ENDPRG
+OTTHR2 FDB   0
+ENOT2  FDB   0
+
+ENDPRG FCB   1
+
+       FCC   "Greg wuz here!"
+
+PALS   FCB   0,7,31,38,18,11,36,58,20,40,47,60,39,52,26,63
+
+STR1   FCC /by Erik Gavriluk and Greg Miller/,13
+STR2   FCC /by Greg Miller and Erik Gavriluk/,13
+
+CWRKS  JSR   $A42D
+*      CLR   $FF40
+*      CLR   $986
+
+       LEAY  3270,PCR
+
+       LDX   #PGE0
+       CLRB
+A@     CLR   ,X+
+       DECB
+       BNE   A@
+
+       LDD   #PGE0
+       FCB   $1F,$8B
+       LDA   #$FF
+       STA   <FLNAMD
+
+       LDA   #$FF
+       STA   SQUIGL
+       LDA   #52
+       STA   $FF03
+       LEAY  9,Y
+       LDY   ,Y
+       STY   $7600
+*      LDA   $EB
+*      STA   FNTDRV
+*      ADDA  #$30
+*      STA   DRIVE
+*      CLR   113
+*      LDX   #CERR
+*      STX   $18F
+*      LDA   #$7E
+*      STA   $18E
+
+*      LDX   #PALS
+*      LDY   #RGBCMP
+*      LDU   #$FFB0
+*      LDB   #16
+*A@     LDA   ,X+
+*      TST   $E00
+*      BEQ   R@
+*      LDA   A,Y
+*R@     STA   ,U+
+*      DECB
+*      BNE   A@
+
+       LDA   #16
+       STA   <PATNUM
+       LDS   #$3FF
+       JSR   BOOT3
+       CLRA
+       STA   $FFB0
+       STA   $FF9A
+       JSR   PAGEIN  GET $78000
+       JSR   VIEW    SET $78000
+       CLRB
+       JSR   CLS
+
+* TITLE PAGE LOAD:
+       LDX   #$1C1D
+       STX   $FFA4
+       LDX   #$1E1F
+       STX   $FFA6
+       LDX   #TITNME
+       LDU   #$94C
+A@     LDA   ,X+
+       STA   ,U+
+       CMPX  #TITNME+11
+       BNE   A@
+       JSR   LOAD
+       LDA   #%00111110
+       STA   $FF99
+       CLR   $FFB6
+       CLR   $FFB7
+       CLR   $FFBE
+       LDA   275
+       ANDA  #1
+       ADDA  #6
+       LDX   #$FFB0
+       LDB   #63
+       STB   A,X
+       STB   $FFBC (?)
+       LDX   #$7000
+       STX   $FF9D
+****
+
+       CLRA
+       JSR   PAGEIN
+       LDB   #15
+       JSR   CLS
+
+       LDA   #1
+       JSR   PAGEIN
+       LDX   #$8000
+       LDD   #$FFFF
+A@     STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       CMPX  #$8000+200*160
+       BNE   A@
+
+       CLRA
+       JSR   PAGEIN
+
+ENDSTK
+*^^ leave it THERE, Erik^^*
+
+       LDA   #12
+       STA   <BV1
+       STA   <BV2
+       LDX   #0
+       STX   <BH1
+       LDX   #320
+       STX   <BH2
+       CLRB
+       JSR   LINE
+
+       LDU   #$8000+10*160+2
+       LDA   #$0F
+A@     LDB   #156
+B@     STA   ,U+
+       DECB
+       BNE   B@
+       COMA
+       LEAU  4,U
+       CMPU  #$8000+188*160
+       BLO   A@
+
+       LDX   #4
+       STX   <BH1
+       LDX   #315
+       STX   <BH2
+       LDA   #10
+       STA   <BV1
+       LDA   #188
+       STA   <BV2
+       JSR   BOX  SCREEN BORDER
+
+* ICON BOXES
+       LDX   #8
+       STX   <BH1
+       LDX   #38
+       STX   <BH2
+       LDA   #13
+       STA   <BV1
+       LDA   #121  133
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       CLRB
+       JSR   BOX
+
+* LINE WIDTH BOX:
+       LDX   #8
+       STX   <BH1
+       LDX   #38
+       STX   <BH2
+       LDA   #136
+       STA   <BV1
+       LDA   #185
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       CLRB
+       JSR   BOX
+* SHADOW FOR LINE WIDTH BOX:
+       LDX   #39
+       STX   <LH1
+       STX   <LH2
+       LDA   #137
+       STA   <LV1
+       LDA   #186
+       STA   <LV2
+       JSR   LINE
+       LDA   #186
+       STA   <LV1
+       STA   <LV2
+       LDX   #9
+       STX   <LH1
+       LDX   #39
+       STX   <LH2
+       JSR   LINE
+
+* FG/BG COLOR BOX:
+
+       LDX   #8
+       STX   <BH1
+       LDX   #38
+       STX   <BH2
+       LDA   #124
+       STA   <BV1
+       LDA   #133
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       CLRB
+       JSR   BOX
+
+* SHADOWS:
+       LDA   #134
+       STA   <LV1
+       STA   <LV2
+       LDX   #9
+       STX   <LH1
+       LDX   #39
+       STX   <LH2
+       JSR   LINE
+       LDX   #39
+       STX   <LH1
+       STX   <LH2
+       LDA   #125
+       STA   <LV1
+       LDA   #134
+       STA   <LV2
+       JSR   LINE
+* INSIDE DATA
+       JSR   BGBOX
+       JSR   FGBOX
+
+* OUTER BOX FOR PATTERNS
+
+       LDX   #43
+       STX   <BH1
+       LDX   #311
+       STX   <BH2
+       LDA   #159
+       STA   <BV1
+       LDA   #185
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       CLRB
+       JSR   BOX
+       LDX   #44
+       STX   <LH1
+       LDX   #312
+       STX   <LH2
+       LDA   #186
+       STA   <LV1
+       STA   <LV2
+       JSR   LINE
+       LDX   #312
+       STX   <LH1
+       STX   <LH2
+       LDA   #160
+       STA   <LV1
+       LDA   #186
+       STA   <LV2
+       JSR   LINE
+
+* LITTLE LINES FOR INSIDE
+* LINE WIDTH BOX
+       LDA   #136+5
+       STA   <LV1
+       STA   <LV2
+       LDX   #20
+       STX   <LH1
+       STX   <LH2
+       LDB   #9    10
+       PSHS  B
+I@     CLRB
+       JSR   LINE
+       LDX   <LH1
+       INX
+       INX
+       STX   <LH1
+       STX   <LH2
+       DEC   ,S
+       BNE   I@
+       LEAS  1,S
+
+       LDX   #20
+       STX   <LH1
+       LDA   <LV1
+       ADDA  #7
+       STA   <LV1
+       STA   <LV2
+       LDX   #18+18
+       STX   <LH2
+       CLRB
+       JSR   LINE
+
+       LDA   <LV1
+       ADDA  #7
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       CLRB
+       JSR   LINE
+
+       LDA   <LV1
+       ADDA  #7
+       STA   <LV1
+       STA   <LV2
+       LDY   #4
+A@     CLRB
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       LEAY  -1,Y
+       BNE   A@
+
+       LDA   <LV1
+       ADDA  #7
+       STA   <LV1
+       STA   <LV2
+       LDY   #8
+A@     CLRB
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       LEAY  -1,Y
+       BNE   A@
+
+* MAIN BOX
+       LDX   #43
+       STX   <BH1
+       LDX   #311
+       STX   <BH2
+       LDA   #10
+       STA   <BV1
+       LDA   #155
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       CLRB
+       JSR   BOX
+       LDX   #43    **42**
+       STX   <BH1
+       LDX   #310
+       STX   <BH2
+*      LDA   #156
+*      STA   <BV2
+       JSR   BOX
+*      DEC   <BV2
+*      JSR   BOX
+       LDX   #44
+       STX   <LH1
+       LDX   #311
+       STX   <LH2
+       LDA   #156
+       STA   <LV1
+       STA   <LV2
+       JSR   LINE
+
+* BOTTOM LINE FOR FILENAME:
+       LDX   #44    43
+       STX   <LH1
+       LDX   #309   311
+       STX   <LH2
+       LDA   #23
+       STA   <LV1
+       STA   <LV2
+       JSR   LINE
+       LDA   #22
+       STA   <LV1
+       STA   <LV2
+       JSR   LINE
+
+       LDA   #$FF
+       STA   $8000
+
+       CLRB
+* VIEW PATTERN BOX
+       LDX   #47   48
+       STX   <BH1
+       LDX   #78
+       STX   <BH2
+       LDA   #162
+       STA   <BV1
+       LDA   #182
+       STA   <BV2
+       JSR   BOX
+
+       LDX   #82
+       STX   <BH1
+       LDX   #307
+       STX   <BH2
+       JSR   BOX
+
+       LDX   #82   81
+       STX   <BH1
+       LDX   #306  307
+       STX   <BH2
+       LDA   #172
+       STA   <BV1
+       STA   <BV2
+       JSR   BOX
+
+       LDA   #162
+       STA   <LV1
+       LDA   #182
+       STA   <LV2
+       LDA   #17    16
+       PSHS  A
+       LDX   #82
+       STX   <LH1
+       STX   <LH2
+A@     JSR   LINE
+       LDX   <LH1
+       INX
+       STX   <LH1
+       STX   <LH2
+       JSR   LINE
+       LDX   <LH1
+       LEAX  13,X
+       STX   <LH1
+       STX   <LH2
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+       LDA   #$FF
+       STA   $8000
+
+       LDX   #ICONS
+       LDU   #$8000+4+13*160
+A@     LDB   #4
+B@     LDA   ,X+
+       JSR   CHR2
+       LEAU  4,U
+       DECB
+       BNE   B@
+       LEAU  144,U    133
+       CMPU  #$8000+4+121*160
+       BLO   A@
+
+       LDA   #$FF
+       STA   $8000
+
+* SHADOW FOR ICON BOXES:
+       CLRB
+       LDX   #39
+       STX   <LH1
+       STX   <LH2
+       LDA   #13
+       STA   <LV1
+       LDA   #122   134
+       STA   <LV2
+       JSR   LINE
+       LDX   #9
+       STX   <LH1
+       LDX   #39
+       STX   <LH2
+       LDA   #122  134
+       STA   <LV1
+       STA   <LV2
+       JSR   LINE
+
+       CLRA
+       JSR   DOPAT
+       JSR   SHOPAT
+       LDX   #0
+       STX   WINDOX
+       CLR   WINDOY
+       JSR   GET
+
+       JSR   PUTMRK
+
+       LDA   #$FF
+       STA   $8000
+
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+
+       LDA   #2
+*      JSR   VIEW
+
+       LDA   #$FF
+       STA   $8000
+
+       JSR   SHOTIT
+
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDA   #2
+*      JSR   VIEW
+       CLRA
+       JSR   PAGEIN
+       CLRA
+*      JSR   VIEW
+
+       JSR   LDMDS
+       JMP   $200
+
+MODS   FCC   "DELUXE1 BIN",0
+       FCC   "DELUXE2 BIN",1
+       FCC   "DELUXE3 BIN",2
+       FCC   "DELUXE4 BIN",3
+       FCC   "DELUXE5 BIN",4
+       FCC   "DELUXE6 BIN",5
+       FCC   "DELUXE7 BIN",6
+
+       FCB   0
+
+Z@     LEAS  2,S
+       LDA   #$3B
+       STA   $FFA3
+       RTS
+LDMDS  STA   65496
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STD   $FFA6
+       STA   $FFDE
+       ORCC  #$50
+       LDA   #76
+       STA   $FF90
+       CLRA
+       TFR   A,DP
+       LDA   #52
+       STA   $FF03
+       LDX   #MODS
+       PSHS  X
+LDMDLP
+A@     LDX   ,S
+       TST   ,X
+       BEQ   Z@
+       LDY   #$94C
+       LDB   #11
+B@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   B@
+       LDA   ,X+
+       STA   $FFA3
+       STX   ,S
+
+       PSHS  U
+       LDU   #$C959
+       LDX   $C004
+       CMPX  #$D66C
+       BEQ   A@
+       LDU   #$CA07
+A@     JSR   ,U
+       PULS  U      
+
+A@     JSR   GETB
+       CMPA  #255
+       BEQ   B@
+       JSR   GETB16
+       TFR   D,Y
+       JSR   GETB16
+       TFR   D,X
+C@     JSR   GETB
+       STA   ,X+
+       LEAY  -1,Y
+       BNE   C@
+       BRA   A@
+B@     JSR   $A42D
+       JMP   LDMDLP
+GETB   JMP   $A176
+GETB16 BSR   GETB
+       PSHS  A
+       BSR   GETB
+       PULS  B
+       EXG   A,B
+       RTS
+
+       END

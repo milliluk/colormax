@@ -1,0 +1,322 @@
+       NAM   DEFINE AN EDIT BOX
+
+EDBOX  LDX   <OH1
+       CMPX  #0
+       BEQ   A@
+       JSR   PUTOVL
+       CLRA
+       JSR   PAGEIN
+       JSR   PUT
+       LDA   #1
+       LDB   #8
+       JSR   PCOPY
+       JSR   WTBUT
+       JMP   MENU
+A@     CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDD   AX
+       ADDD  #4
+       CMPD  #44
+       BHS   R@
+       LDD   #44
+R@     CMPD  #309
+       BLS   Q@
+       LDD   #309
+Q@     STD   EH1
+       LDA   <AY
+       ADDA  #5
+       STA   EV1
+*THAT SET'S UP THE BOX*
+*START POINT*
+       CLR   LNEWDT
+
+       CLR   WPAGE
+       JSR   JOYSTK
+       LDD   <JOYX
+       ADDD  #4
+       STD   STRX
+       STD   EH2
+       LDA   <JOYY
+       ADDA  #5
+       STA   STRY
+       STA   EV2
+       JSR   JUXTA
+
+OVRLP  LDA   $FF00
+       BITA  #1
+       LBNE  OVROUT
+       JSR   EDITBX
+       JSR   JOYSTK
+       LDX   <JOYX
+       LEAX  4,X
+       CMPX  STRX
+       BNE   A@
+       LDA   <JOYY
+       ADDA  #5
+       CMPA  STRY
+       BEQ   OVRLP
+A@
+       LDX   <JOYX
+       LEAX  4,X
+       STX   STRX
+       LDA   <JOYY
+       ADDA  #5
+       STA   STRY
+
+*SWITCH PAGES*
+       LDA   WPAGE
+       EORA  #2
+       STA   WPAGE
+       JSR   PAGEIN
+       JSR   GET *GET THE WINDOW
+       LDD   <JOYX
+       STD   EH2
+       LDA   <JOYY
+       STA   EV2
+       JSR   JUXTA
+       LDA   WPAGE
+       JSR   VIEW
+       BRA   OVRLP
+
+JUXTA  LDX   EH1
+       LDU   EH2
+       CMPX  EH2
+       BLO   A@
+       EXG   X,U
+A@     STX   <OH1
+       STU   <OH2
+
+       LDA   EV1
+       LDB   EV2
+       CMPA  EV2
+       BLO   A@
+       EXG   A,B
+A@     STA   <OV1
+       STB   <OV2
+
+       LDX   <OH2
+       CMPX  #309
+       BLS   A@
+       LDX   #309
+A@     STX   <OH2
+
+       LDX   <OH1
+       CMPX  #44
+       BHS   A@
+       LDX   #44
+A@     STX   <OH1
+
+       LDA   <OV1
+       CMPA  #24
+       BHS   A@
+       LDA   #24
+A@     STA   <OV1
+
+       LDA   <OV2
+       CMPA  #154
+       BLS   A@
+       LDA   #154
+A@     STA   <OV2
+
+       RTS
+
+B@     CLRA
+       JSR   PAGEIN
+       JSR   GET
+       CLRA
+       JSR   VIEW
+       LDX   #0
+       STX   <OH1
+       JMP   MENU
+*
+OVROUT CLRA
+       JSR   PAGEIN
+       JSR   GET
+       LDD   <OH2
+       SUBD  <OH1
+       CMPD  #3
+       BLO   B@
+       LDA   <OV2
+       SUBA  <OV1
+       CMPA  #2
+       BLO   B@
+
+* COPY FOR "UNDO":
+       LDA   #1
+       LDB   #8
+       JSR   PCOPY
+
+*move to the new page*
+*--------------------*
+
+*find horizontal size-minus borders*
+       LDD   <OH1
+       LSRA
+       RORB
+       PSHS  D
+       LDD   <OH2
+       LSRA
+       RORB
+       SUBD  ,S++
+       DECB
+       STB   <OXSZE
+       PSHS  B *HORZ LENGTH, MINUS THE TWO BORDER BYTES*
+
+       LDB   #159
+       SUBB  ,S
+       PSHS  B
+*amount to increment X & U later
+
+*find and save left AND byte*
+
+       LDB   #%11111111
+       LDA   <OH1+1
+       LSRA
+       BCC   V@
+       LDB   #%000011111
+V@
+       PSHS  B
+       STB   <OXL
+
+*Find and save right AND byte*
+
+       LDB   #%11110000
+       LDA   <OH2+1
+       LSRA
+       BCC   V@
+       LDB   #%11111111
+V@     PSHS  B
+       STB   <OXR
+
+       LDD   #$2021
+       STD   $FFA4
+
+       LDA   <OV1
+       LDB   #160
+       MUL
+       TFR   D,X
+       LDD   <OH1
+       LSRA
+       RORB
+       LEAX  D,X
+
+       LDB   #$3C
+A@     CMPX  #8192
+       BLO   B@
+       INCB
+       LEAX  -8192,X
+       BRA   A@
+B@     STB   $FFA6
+       INCB
+       STB   $FFA7
+
+       LDU   #$8000
+       LEAX  $C000,X
+
+       LDA   <OV2
+       SUBA  <OV1
+       INCA
+       STA   <OYSZE
+       PSHS  A
+
+       LDA   <ERCOLR
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   <WPAGE
+*Copy the shit*
+
+DEFLP  LDA   <OXL
+       BMI   A@
+       LDA   ,X+
+       ANDA  #$0F
+       ORA   <WPAGE
+       BRA   B@
+A@     LDA   ,X+
+B@     STA   ,U+
+
+
+       LDB   4,S
+       BEQ   DEFLPZ
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+DEFLPZ
+
+       LDA   <OXR
+       CMPA  #$FF
+       BEQ   A@
+       LDA   ,X
+       ANDA  #$F0
+       ORA   <ERCOLR
+       BRA   B@
+A@     LDA   ,X
+B@     STA   ,U
+
+       CLRA
+       LDB   3,S
+       LEAX  D,X
+       LEAU  D,U
+
+       CMPX  #$E000
+       BLO   T@
+       INC   $FFA6
+       INC   $FFA7
+       LEAX  -8192,X
+T@
+
+       CMPU  #$A000
+       BLO   U@
+       INC   $FFA4
+       INC   $FFA5
+       LEAU  -8192,U
+U@
+
+       DEC   ,S
+       LBNE  DEFLP
+
+       LEAS  5,S
+
+* ERASE ON THE FULL PAGE WHAT IS
+* UNDERNEATH THE DEFINED AREA
+
+       CLRA
+       JSR   PAGEIN
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDA   #2
+       JSR   VIEW
+       LDX   <OH1
+       STX   <BH1
+       LDX   <OH2
+       STX   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       STA   <BV2
+       LDB   <ERCOLR
+       JSR   FILLED
+       JSR   PUT
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       CLRA
+       JSR   VIEW
+       JMP   MENU
+
+EH1    FDB   0
+EH2    FDB   0
+EV1    FCB   0
+EV2    FCB   0
+STRX   FDB   0
+STRY   FCB   0
+
+STAK99 FDB   0
+
+       END
+
+

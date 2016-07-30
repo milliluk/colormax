@@ -1,0 +1,720 @@
+       NAM   SET PALETTE
+RGBFLG EQU   $E00
+       INCL  DEFS.TXT
+       INCL  LOWDEFS.TXT
+       ORG   $6000
+       FDB   SETPAL
+       FDB   REMAP,CYCR
+       FDB   CYCS,CYCC
+       FDB   DITHER,COPYP
+
+* BOTH CMP & RGB;
+* STUFF DRAWN TO PAGE #2
+SETPAL CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [PAGEIN]
+
+       LDX   #0
+       STX   <OH1
+
+       TST   RGBFLG
+       LBEQ  SET1
+
+* SET PALETTE CMP:
+SET2   LDX   #80
+       STX   <BH1
+       LEAX  160,X
+       STX   <BH2
+       LDA   #33
+       STA   <BV1
+       LDA   #159
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       LDB   #15
+       JSR   [BOX]
+       JSR   BUMP
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   [BOX]
+
+       LDX   #$FFB0
+       LDU   #PPPPPP
+A@     LDA   ,X+
+       STA   ,U+
+       CMPX  #$FFC0
+       BNE   A@
+
+       LDX   #80+15
+       STX   <BH1
+       LEAX  20,X
+       STX   <BH2
+       LDA   #33+5
+       STA   <BV1
+       ADDA  #10
+       STA   <BV2
+       LDA   #8
+       PSHS  A
+       LDB   #1
+A@     JSR   [FILLED]
+       PSHS  B
+       CLRB
+       JSR   [BOX]
+       PULS  B
+       INCB
+       LDA   <BV1
+       ADDA  #15
+       STA   <BV1
+       ADDA  #10
+       STA   <BV2
+       CMPB  #9
+       BNE   A@
+
+       LDX   #80+15+20+15
+       STX   <BH1
+       LEAX  40,X
+       STX   <BH2
+       LDA   #33+10
+       STA   <BV1
+       ADDA  #15
+       STA   <BV2
+       LDB   #9
+A@     JSR   [FILLED]
+       PSHS  B
+       CLRB
+       JSR   [BOX]
+       PULS  B
+       INCB
+       LDA   <BV1
+       ADDA  #30
+       STA   <BV1
+       ADDA  #15
+       STA   <BV2
+       CMPB  #13
+       BNE   A@
+
+       LDX   #80+15+20+15+40+20
+       STX   <BH1
+       LEAX  30,X
+       STX   <BH2
+       LDA   #33+5+25+20
+       STA   <BV1
+       ADDA  #25
+       STA   <BV2
+       LDB   #13
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   BUMP
+       JSR   [BOX]
+
+       LDA   COLOR
+       LDX   #$FFB0
+       LDA   A,X
+       PSHS  A
+       ANDA  #63
+       CLRB
+A@     CMPA  #16
+       BLO   B@
+       INCB
+       SUBA  #16
+       BRA   A@
+B@     PSHS  A
+       ANDA  #7
+       STD   BAR1  A=CLR,B=LUM
+       PULS  A
+
+       CMPA  #7
+       BHI   A@
+       CLRA
+       FCB   $8C
+A@     LDA   #8
+       STA   TOPBAR  0 OR 8
+
+       JSR   SETPL9
+
+       PULS  A
+       STA   $FFB0+13
+
+       LDX   #$FFB9
+       CLRA
+A@     STA   ,X+
+       ADDA  #16
+       CMPA  #64
+       BNE   A@
+
+       JSR   DBAR1
+       JSR   DBAR2
+
+       LDA   #2
+       JSR   [VIEW]
+
+* BAR 1; (0-7) OR (8-15)
+* BAR 2; (0-3) ...
+* BAR 1 + (BAR 2*16) = PALETTE
+* TO BE DISPLAYED IN $FFB0+13
+
+SET2LP JSR   MNUCLK
+       LDX   <AX
+       CMPX  #80
+       BLO   A@
+       CMPX  #240
+       BHI   A@
+       LDA   <AY
+       CMPA  #33
+       BLO   A@
+       CMPA  #159
+       BHI   A@
+       LDX   <AX
+       CMPX  #80+15
+       BLO   SET2LP
+       CMPX  #80+15+20
+       BLO   SET2L
+       CMPX  #80+15+20+15
+       BLO   SET2LP
+       CMPX  #80+15+20+15+40
+       BLO   SET2R
+       CMPX  #80+15+20+15+40+15
+       BLO   SET2LP
+       CMPX  #80+35+55+15+30
+       LBLO  FLPCMP
+       BRA   SET2LP
+A@     LDA   $FFB0+13
+       PSHS  A
+
+       LDX   #PPPPPP
+       LDU   #$FFB0
+A@     LDA   ,X+
+       STA   ,U+
+       CMPU  #$FFC0
+       BNE   A@
+       PULS  A
+       LDX   #$FFB0
+       LDB   COLOR
+       STA   B,X
+       LDA   $FFBF
+       STA   $FF9A
+
+       CLRA
+       JSR   [VIEW]
+       JSR   [WTBUT]
+       JMP   [MENU]
+
+* CODE FOR PALETTE 0-7
+SET2L  CLRB
+       LDA   <AY
+       CMPA  #38
+       BLO   Y@
+       CMPA  #38+15*8
+       BHI   Y@
+       SUBA  #38
+A@     CMPA  #10
+       BLO   Z@
+       CMPA  #15
+       BLO   Y@
+       SUBA  #15
+       INCB
+       BRA   A@
+Z@     CMPB  BAR1
+       BEQ   Y@
+       STB   BAR1
+       JSR   DBAR1
+       JSR   SHONEW
+Y@     JMP   SET2LP
+
+* CODE FOR LUM BOXES
+SET2R  LDA   <AY
+       CMPA  #33+10
+       BLO   Y@
+       SUBA  #33+10
+       CLRB
+A@     CMPA  #15
+       BLO   Z@
+       CMPA  #30
+       BLO   Y@
+       SUBA  #30
+       INCB
+       BRA   A@
+Z@     CMPB  BAR2
+       BEQ   Y@
+       STB   BAR2
+       JSR   DBAR2
+       BSR   SHONEW
+Y@     JMP   SET2LP
+
+FLPCMP LDA   TOPBAR
+       EORA  #8
+       STA   TOPBAR
+       JSR   SETPL9
+       JSR   [WTBUT]
+       JMP   SET2LP
+
+SHONEW LDA   BAR2
+       LDB   #16
+       MUL
+       ADDB  BAR1
+       ADDB  TOPBAR
+       STB   $FFB0+13
+       RTS
+
+SETPL9 LDX   #$FFB1
+A@     STA   ,X+
+       INCA
+       CMPX  #$FFB9
+       BNE   A@
+       BRA   SHONEW
+
+DBAR2  LDX   #$8000+160*38+62
+       BRA   A@
+DBAR1  LDX   #$8000+160*38+44
+A@     PSHS  X
+
+       LDA   #120
+       PSHS  A
+       LDD   #$FFFF
+A@     STD   -2,X
+       STD   ,X
+       LEAX  160,X
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+       PULS  X
+       CMPX  #$8000+160*38+62
+       BNE   C@
+       LDA   BAR2
+       LDB   #30
+       MUL
+       ADDB  #10
+       BRA   D@
+C@     LDA   BAR1
+       LDB   #15
+       MUL
+D@     TSTB
+       BEQ   B@
+A@     LEAX  160,X
+       DECB
+       BNE   A@
+B@     JMP   GOFOR2
+
+BAR1   FCB   0
+BAR2   FCB   0
+TOPBAR FCB   0
+
+*
+*
+*
+*
+
+
+* SET PALETTE RGB:
+SET1   LDX   #85
+       STX   <BH1
+       LDX   #160+85
+       STX   <BH2
+       LDA   #46
+       STA   <BV1
+       LDA   #96+46
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       LDB   #15
+       JSR   [BOX]
+       JSR   BUMP
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   [BOX]
+
+       LDX   #85+15-42
+       STX   <BH1
+       LEAX  20,X
+       STX   <BH2
+
+* DRAW 4 BOXES EACH FOR R G B
+       LDB   #1
+
+       LDA   #3
+       PSHS  A
+A@     LDA   #4
+       PSHS  A
+       LDA   #46+5
+       STA   <BV1
+       ADDA  #10
+       STA   <BV2
+       LDX   <BH1
+       LEAX  50,X
+       STX   <BH1
+       LEAX  20,X
+       STX   <BH2
+B@     JSR   [FILLED]
+       PSHS  B
+       CLRB
+       JSR   [BOX]
+       PULS  B
+       INCB
+       LDA   <BV1
+       ADDA  #15
+       STA   <BV1
+       ADDA  #10
+       STA   <BV2
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+* BIG BOX BELOW:
+
+       LDX   #85+15+35+15
+       STX   <BH1
+       LEAX  35,X
+       STX   <BH2
+       LDA   #46+65+5
+       STA   <BV1
+       ADDA  #20
+       STA   <BV2
+       LDB   #13
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   BUMP
+       JSR   [BOX]
+
+       LDA   COLOR
+       LDX   #$FFB0
+       LDA   A,X
+* GET CURRENT PALETTE
+* R,G,B SETTINGS FOR CHECK
+* MARKS
+       PSHS  A   RGBRGB
+       ANDA  #%00100000
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       STA   RVAL
+       LDA   ,S
+       ANDA  #%00000100
+       LSRA
+       LSRA
+       ORA   RVAL
+       STA   RVAL
+
+       LDA   ,S  RGBRGB
+       ANDA  #%00010000
+       LSRA
+       LSRA
+       LSRA
+       STA   GVAL
+       LDA   ,S
+       ANDA  #%00000010
+       LSRA
+       ORA   GVAL
+       STA   GVAL
+
+       LDA   ,S  RGBRGB
+       ANDA  #%00001000
+       LSRA
+       LSRA
+       STA   BVAL
+       LDA   ,S
+       ANDA  #%00000001
+       ORA   BVAL
+       STA   BVAL
+* SIGH.
+
+*      X=$FFB0
+       LDU   #PPPPPP
+A@     LDA   ,X+
+       STA   ,U+
+       CMPX  #$FFC0
+       BNE   A@
+
+       PULS  A
+       STA   $FFB0+13
+
+       LDX   #$FFB1
+       LDU   #PP11
+       LDB   #12
+A@     LDA   ,U+
+       STA   ,X+
+       DECB
+       BNE   A@
+
+       JSR   MARKS
+
+       LDA   #2
+       JSR   [VIEW]
+
+SP1LP  JSR   MNUCLK
+       LDX   <AX
+       CMPX  #85
+       LBLO  DONSP1
+       CMPX  #85+160
+       LBHI  DONSP1
+       LDA   <AY
+       CMPA  #46-8  ///
+       LBLO  DONSP1
+       CMPA  #46+96
+       LBHI  DONSP1
+
+* POINTING AT SOMETHING;
+* FIGURE OUT WHAT IT IS
+* VERTICALLY:
+
+       CMPA  #46+60
+       BHI   SP1LP
+       CMPA  #51
+       BLO   SP1LP
+       LDB   #3
+       SUBA  #46+5
+B@     CMPA  #10
+       BLO   A@
+       CMPA  #15
+       BLO   SP1LP
+       DECB
+       SUBA  #15
+       BRA   B@
+A@
+
+* B=0-3 ROW;
+* NOW FIGURE WHICH COLUMN
+
+       PSHS  B
+
+       CLRB
+       LDX   <AX
+       CMPX  #108
+       BLO   SP1LP
+       LEAX  -108,X
+B@     CMPX  #20
+       BLO   A@
+       CMPX  #50
+       BLO   SP1LP
+       LEAX  -50,X
+       INCB
+       BRA   B@
+A@
+
+       PULS  A
+       LSLB
+       LDX   #V@
+       JSR   [B,X]
+       JSR   RGBRGB
+X@     JMP   SP1LP
+V@     FDB   A@,B@,C@
+W@     LEAS  2,S
+       BRA   X@
+A@     CMPA  RVAL
+       BEQ   W@
+       STA   RVAL
+       LDX   #BASEM+8
+       JMP   GO4IT
+B@     CMPA  GVAL
+       BEQ   W@
+       STA   GVAL
+       LDX   #BASEM+33
+       JMP   GO4IT
+C@     CMPA  BVAL
+       BEQ   W@
+       STA   BVAL
+       LDX   #BASEM+58
+       JMP   GO4IT
+
+DONSP1 LDA   $FFB0+13
+       PSHS  A  *GOOD PALETTE*
+       LDX   #PPPPPP
+       LDU   #$FFB0
+A@     LDA   ,X+
+       STA   ,U+
+       CMPU  #$FFC0
+       BNE   A@
+       PULS  A
+       LDB   COLOR
+       LDX   #$FFB0
+       STA   B,X
+       LDA   $FFBF
+       STA   $FF9A
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [VIEW]
+       JSR   [WTBUT]
+       JMP   [MENU]
+
+BASEM  EQU   $8000+52*160+43
+MARKS  LDX   #BASEM+8
+       LDA   RVAL
+       BSR   GO4IT
+       LDX   #BASEM+33
+       LDA   GVAL
+       BSR   GO4IT
+       LDX   #BASEM+58
+       LDA   BVAL
+*      ...
+
+* A=0-3
+* X=OFFSET
+* MAKE CHECK MARK THERE
+GO4IT  PSHS  X,A
+       LDB   #60
+       PSHS  B
+       LDD   #$FFFF
+A@     STD   ,X
+       STD   -2,X
+       LEAX  160,X
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       PULS  X,A
+
+       EORA  #3
+       LDB   #15
+       MUL
+       TSTB
+       BEQ   B@
+A@     LEAX  160,X
+       DECB
+       BNE   A@
+B@
+
+GOFOR2 LDU   #AMARK
+       LDB   #8
+       PSHS  B
+A@     LDD   ,U++
+       STD   -2,X
+       LDD   ,U++
+       STD   ,X
+       LEAX  160,X
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+AMARK  FDB   $FFFF,$FFFF
+       FDB   $FFFF,$FFFF
+       FDB   $FFFF,$FF00
+       FDB   $FFFF,$F00F
+       FDB   $FFFF,$00FF
+       FDB   $00F0,$0FFF
+       FDB   $F000,$FFFF
+       FDB   $FF0F,$FFFF
+
+* CHANGE VALUES IN RVAL,GVAL
+* AND BVAL INTO RGBRGB AND
+* STORE TO $FFB0+13
+
+RGBRGB LDA   RVAL
+       ANDA  #%00000010 00R000X0
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       PSHS  A
+       LDA   RVAL
+       ANDA  #1         00000R0X
+       LSLA
+       LSLA
+       ORA   ,S
+       STA   ,S
+       LDA   GVAL       000G00X0
+       ANDA  #%00000010
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S
+       STA   ,S
+       LDA   GVAL       000000GX
+       ANDA  #1
+       LSLA
+       ORA   ,S
+       STA   ,S
+       LDA   BVAL       0000B0X0
+       ANDA  #%00000010
+       LSLA
+       LSLA
+       ORA   ,S
+       STA   ,S
+       LDA   BVAL       0000000X
+       ANDA  #1
+       ORA   ,S+
+       STA   $FFB0+13
+       RTS
+
+PPPPPP RMB   16  PALETTE BUFFER
+RVAL   FCB   0   XXXXXXRR
+GVAL   FCB   1   XXXXXXGG
+BVAL   FCB   2   XXXXXXBB
+
+* VALUES        RGBRGB
+PP11   FCB   %00100100
+       FCB   %00100000
+       FCB   %00000100
+       FCB   %00000000
+
+       FCB   %00010010
+       FCB   %00010000
+       FCB   %00000010
+       FCB   %00000000
+
+       FCB   %00001001
+       FCB   %00001000
+       FCB   %00000001
+       FCB   %00000000
+
+
+MNUCLK LDX   USESYM
+       LDU   USESY2
+       PSHS  X,U
+       LDX   USEOUT
+       LDU   USEOU2
+       PSHS  X,U
+
+       LDX   ARROW
+       STX   USESYM
+       LDX   ARR2
+       STX   USESY2
+       LDX   AROUT
+       STX   USEOUT
+       LDX   AROU2
+       STX   USEOU2
+       JSR   [MENARW]
+
+       PULS  X,U
+       STU   USEOU2
+       STX   USEOUT
+       PULS  X,U
+       STU   USESY2
+       STX   USESYM
+       RTS
+
+BUMP   INC   <BV2
+       DEC   <BV1
+       LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       RTS
+
+       INCL  CYCLE.TXT
+
+       END
+
+
+
+
+

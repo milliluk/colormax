@@ -1,0 +1,648 @@
+       NAM   LOAD
+
+* BEWARE;
+* ERIK'S BEEN HERE!
+
+RGBFLG EQU   $E00
+       INCL  DEFS.TXT
+       INCL  LOWDEFS.TXT
+
+       ORG   $6000
+       FDB   LOAD,SAVE,SAVEA2
+       FDB   GETDIR,GETFLS,DSKJOY,DKMSG,DKMSG2,FILENT
+       FDB   LD692,LODPAT,SAVPAT
+       FDB   SAVEAS,LD69,MSGS
+
+PTFLAG FCB   0
+LODPAT LDA   #$FF
+       STA   PTFLAG
+       CLR   FL69
+       CLR   FLGIF
+       JSR   [PASTE2]
+       JMP   LOAD2
+
+SAVPAT LDA   #$FF
+       STA   PTFLAG
+       CLR   FLGIF
+       JSR   [PASTE2]
+       JMP   SAVEA3
+ 
+X@     LDU   FILKS
+       CMPU  #FILENT
+       BEQ   Y@
+       LEAU  -1,U
+       STU   FILKS
+       LDA   #32
+       STA   ,U
+       LDX   #15*8
+       STX   <BH1
+       LDX   #25*8-1
+       STX   <BH2
+       LDA   #19*8
+       STA   <BV1
+       LDA   #20*8+1
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       LDA   #19*8
+       STA   <LPRTV
+       LDX   #15*8
+       STX   <LPRTH
+       LDX   #FILENT
+CVB
+       CMPX  FILKS
+       BEQ   CVV
+       LDA   ,X+
+       JSR   [LYNPRT]
+       BRA   CVB
+CVV
+       BRA   Y@
+FILKS
+       RMB   2
+Y@     PULS  X,D,Y,U,PC
+Z@     PSHS  X,D,Y,U
+       JSR   [POLCAT]
+       TSTA
+       BEQ   Y@
+       CMPA  #8
+       BEQ   X@
+       CMPA  #13
+       LBEQ  FINFIL
+       CMPA  #32
+       BLO   Y@
+       LDU   FILKS
+       CMPU  #FILENT+8
+       BEQ   Y@
+       STA   ,U+
+       STU   FILKS
+       JSR   [LYNPRT]
+       BRA   Y@
+SAVEAS JSR   [PASTE2]
+       LDA   #$FF
+       STA   FLGIF
+       BRA   I@
+SAVEA2 JSR   [PASTE2]
+       CLR   FLGIF
+I@     CLR   PTFLAG
+SAVEA3 JSR   [UPDTE]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDD   #'SA
+       STD   DKMSG+1
+       STD   DKMSG2
+       LDD   #'VE
+       STD   DKMSG+3
+       STD   DKMSG2+2
+       LDX   #FILENT
+       CLR   ,X
+       STX   FILKS
+       LDU   #Z@
+       STU   [SITHK]
+       LDD   #$2020
+       STD   ,X
+       STD   2,X
+       STD   4,X
+       STD   6,X
+       STD   $94C
+       STD   $94E
+       STD   $950
+       STD   $952
+*
+       TST   PTFLAG
+       BEQ   A@
+       LDD   #'PA
+       STD   $954
+       LDA   #'T
+       STA   $956
+       BRA   B@
+A@     LDD   #'MG
+       STD   $954
+       LDA   #'E
+       STA   $956
+B@     JSR   GETFLS
+       LDD   #15*8
+       STD   <LPRTH
+       LDA   #19*8
+       STA   <LPRTV
+
+C@     JSR   [MVEARW]
+       LDX   <AX
+       LDA   <AY
+       CMPA  #21*8-3
+       BLO   C@
+       CMPA  #22*8+3
+       BHI   C@
+       CMPX  #13*8-3
+       BLO   B@
+       CMPX  #17*8+3
+       BHI   B@
+       BRA   FINFIL
+B@     CMPX  #22*8-3
+       BLO   C@
+       CMPX  #27*8+3
+       BHI   C@
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+
+FINFIL TST   FILENT
+       BNE   A@
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+A@
+
+       TST   PTFLAG
+       BEQ   Z@
+*SAVE PATTERNS
+       CLR   PTFLAG
+       LDX   #FILENT
+       LDU   #$94C
+B@     LDA   ,X+
+       STA   ,U+
+       CMPX  #FILENT+8
+       BNE   B@
+       JSR   [OPENO]
+       LDX   PATS
+       LDY   #32*32
+A@     LDA   ,X+
+       JSR   [WRTBYT]
+       LEAY  -1,Y
+       BNE   A@
+       JSR   [WRTBYT]
+       JMP   AFTSVE
+Z@     TST   FLGIF
+       LBNE  SVGIF
+
+       JSR   ASKTTL
+       LDB   #32
+       LDY   TITLE
+       LDX   #$2DD
+B@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   B@
+       JMP   ENTSVE
+ 
+SAVE   JSR   [PASTE2]
+       JSR   [UPDTE]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+
+       LDU   #NAMBUF
+       LDX   #$94C
+A@     LDA   ,U+
+       STA   ,X+
+       CMPU  #NAMBUF+8
+       BNE   A@
+
+       LDD   #'MG
+       STD   $954
+       LDA   #'E
+       STA   $956
+
+ENTSVE JSR   [DIALOG]
+       FCC   "   Saving picture ...   ",13,0
+
+       CLR   <FLNAMD
+       LDY   #FILENT
+       LDX   #$94C
+       LDU   #NAMBUF
+       LDB   #8
+I@     LDA   ,Y+
+       STA   ,X+
+       STA   ,U+
+       DECB
+       BNE   I@
+
+       LDD   #'MG
+       STD   $954
+       LDA   #'E
+       STA   $956
+       LDA   #255
+       STA   [COPERR]
+
+       JSR   [OPENO]
+
+       CLRA
+       JSR   [WRTBYT]
+
+       LDX   CYCPAL
+       LDA   [CYCFLG]
+       CMPA  #$FF
+       BEQ   Z@
+       LDX   #$FFB0
+Z@     LDB   #16
+A@     LDA   ,X+
+       ANDA  #63
+       JSR   [WRTBYT]
+       DECB
+       BNE   A@
+
+       LDA   RGBFLG
+       JSR   [WRTBYT]
+       TST   COMFLG
+       LBNE  I@
+       LDA   #1
+       JSR   [PAGEIN]
+       LDU   #0
+       LDX   #$8000
+       CLR   ,-S
+A@     CLRB
+B@     LDA   ,X
+       STA   ,S
+       CMPX  #160*200+32768
+       BHS   E@
+C@     LDA   ,X+
+       CMPX  #160*200+32768
+       BHI   D@
+       CMPA  ,S
+       BNE   D@
+       INCB
+       CMPB  #255
+       BNE   C@
+       INX
+D@     DEX
+       LEAU  1,U
+       CMPX  #160*200+32768
+       BHS   E@
+       BRA   A@
+E@     LEAS  1,S
+       CLR   COMFL3
+       TST   COMFLG                   
+       BNE   I@ 
+       LDA   #$FF
+       CMPU  #16000
+       BHI   K@
+I@     LDA   COMFLG
+K@     STA   COMFL3
+
+       JSR   [WRTBYT]
+
+       LDX   TITLE
+       LDB   #29
+A@     LDA   ,X+
+       JSR   [WRTBYT]
+       DECB
+       BNE   A@
+
+       LDA   [CYCFLG]
+       JSR   [WRTBYT]
+
+       LDA   [CYCSP]
+       JSR   [WRTBYT]
+
+       LDA   [CYCLO]
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   [CYCHI]
+       JSR   [WRTBYT]
+
+       LDA   #1
+       JSR   [PAGEIN]
+       TST   COMFL3
+       BNE   NOCMP
+       LDX   #$8000
+       CLR   ,-S
+A@     CLRB
+       LDA   ,X
+       STA   ,S
+       CMPX  #160*200+32768
+       BHS   D@
+B@     LDA   ,X+
+       CMPX  #160*200+32768
+       BHI   C@
+       CMPA  ,S
+       BNE   C@
+       INCB
+       CMPB  #$FF
+       BNE   B@
+       INX
+C@     DEX
+       TFR   B,A
+       JSR   [WRTBYT]
+       LDA   ,S
+       JSR   [WRTBYT]
+       CMPX  #160*200+32768
+       BHS   D@
+       BRA   A@
+D@     CLRA
+       JSR   [WRTBYT]
+       CLRA
+       JSR   [WRTBYT]
+       LEAS  1,S
+       JMP   AFTSVE
+
+NOCMP  LDX   #$8000
+       LDY   #160*200
+A@     LDA   ,X+
+       JSR   [WRTBYT]
+       LEAY  -1,Y
+       BNE   A@
+
+AFTSVE JSR   [CLOSE]
+
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+
+       CLRA
+       JSR   [PAGEIN]
+       CLR   $986
+       CLR   $FF40
+       JSR   [SHOTIT]
+       JMP   [MENU]
+
+FLGIF  FCB   0
+
+LD69   LDA   #$FF
+       STA   FLGIF
+       CLR   FL69
+       JSR   [PASTE2]
+       BRA   LOAD2
+FL69   FCB   0
+
+LD692  LDA   #$FF
+       STA   FL69
+       CLR   FLGIF
+       JSR   [PASTE2]
+       BRA   LOAD2
+       
+LOAD   CLR   FL69
+       CLR   PTFLAG
+       CLR   FLGIF
+       JSR   [PASTE2]
+LOAD2  JSR   [UPDTE]
+       LDA   #1
+       LDB   #8
+       JSR   [PCOPY]  OOPS PROT
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+
+       LDD   #'LO
+       STD   DKMSG+1
+       STD   DKMSG2
+       LDD   #'AD
+       STD   DKMSG+3
+       STD   DKMSG2+2
+
+       TST   FLGIF
+       BEQ   C@
+       LDU   #'GI
+       STU   $954
+       LDA   #'F
+       STA   $956
+       BRA   B@
+C@     TST   PTFLAG
+       BEQ   D@
+       LDD   #'PA
+       STD   $954
+       LDA   #'T
+       STA   $956
+       BRA   B@
+D@     TST   FL69
+       BEQ   A@
+       LDD   #'PI
+       STD   $954
+       LDA   #'X
+       STA   $956
+       BRA   B@
+A@     LDD   #'MG
+       STD   $954
+       LDA   #'E
+       STA   $956
+B@     JSR   GETDIR
+       JSR   GETFLS
+       JSR   DSKJOY
+       CMPY  #1
+       BNE   P@
+Q@     LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+P@     TST   FILENT
+       BEQ   Q@
+
+       TST   PTFLAG
+       BEQ   A@
+* LOAD PATTERNS
+       LDX   #FILENT
+       LDU   #$94C
+C@     LDA   ,X+
+       STA   ,U+
+       CMPX  #FILENT+8
+       BNE   C@
+       JSR   [OPENI]
+       LDX   PATS
+       LDY   #32*32
+B@     JSR   [GETBYT]
+       STA   ,X+
+       LEAY  -1,Y
+       BNE   B@
+       JMP   AFTLD
+A@
+
+       JSR   [DIALOG]
+       FCC   "   Loading picture ...   ",13,0
+
+* THIS IS REQUIRED FOR COLOR
+* CYCLING... TURNS OFF AND
+* RESETS ANY CURRENT CYCLING:
+       LDA   #'\
+       STA   [CYCMRK]
+       CLR   [VCYC]
+       CLR   [CYCFLG]
+*
+
+       CLR   <FLNAMD
+       LDX   #FILENT
+       LDB   #8
+       LDY   #$94C
+       LDU   #NAMBUF
+B@     LDA   ,X+
+       STA   ,Y+
+       STA   ,U+
+       DECB
+       BNE   B@
+
+       LDA   #255
+       STA   [COPERR]
+       JSR   [OPENI]
+
+       TST   FL69
+       LBNE  DS69
+       TST   FLGIF
+       LBNE  LDGIF
+
+       JSR   [GETBYT]
+       TSTA
+       LBNE  NOFIT
+       LDU   CYCPAL
+       LDX   #$FFB0
+       LDB   #16
+A@     JSR   [GETBYT]
+       STA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+       STA   $FF9A
+       JSR   [GETBYT] colors 0=RGBA, NZ=Composite
+
+       CMPA  RGBFLG
+       BEQ   Z@
+       LDX   #RGBCMP
+       TSTA
+       BEQ   A@
+       LDX   #CMPRGB
+A@     LDU   #$FFB0
+       LDB   #16
+B@     LDA   ,U
+       ANDA  #63
+       LDA   A,X
+       STA   ,U+
+       DECB
+       BNE   B@
+Z@
+
+       JSR   [GETBYT] compression??? 0=nope!  NZ=yep!
+       STA   COMFL2
+
+       LDB   #29
+       LDX   TITLE
+A@     JSR   [GETBYT]
+       STA   ,X+
+       DECB
+       BNE   A@
+
+       LDA   #$FF
+       STA   [VCYC]
+
+       JSR   [GETBYT]
+       CMPA  #$FF
+       BEQ   A@
+       CLRA
+A@     STA   [CYCFLG]
+
+       JSR   [GETBYT]
+       CMPA  #116
+       BLS   A@
+       LDA   #116
+A@     STA   [CYCSP]
+       JSR   [GETBYT]
+       PSHS  A
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       STA   [CYCLO]
+       PULS  A
+       ANDA  #$0F
+       STA   [CYCHI]
+
+       LDB   #'\
+       LDA   [CYCFLG]
+       BEQ   A@
+       LDB   #'_
+A@     STB   [CYCMRK]
+       JSR   [CYCINC]
+       LDA   #1
+       JSR   [PAGEIN]
+
+       TST   COMFL2
+       BNE   LDNCP
+
+       LDX   #$8000
+A@     JSR   [GETBYT]
+       TSTA
+       BEQ   B@
+       TFR   A,B
+       JSR   [GETBYT]
+C@     STA   ,X+
+       DECB
+       BNE   C@
+       BRA   A@
+B@     JMP   AFTLD
+
+LDNCP  LDY   #160*200
+       LDX   #$8000
+A@     JSR   [GETBYT]
+       STA   ,X+
+       LEAY  -1,Y
+       BNE   A@
+
+AFTLD  LDA   #2
+       CLRB
+       JSR   [PCOPY]
+
+       JSR   [CLOSE]
+
+       CLRA
+       JSR   [PAGEIN]
+       CLR   $986
+       CLR   $FF40
+       JSR   [GET]
+       JSR   [SHOTIT]
+
+       TST   PTFLAG
+       BEQ   A@
+       CLR   PTFLAG
+       CLRA
+       LDB   <PATTRN
+       CMPB  #31
+       BLS   B@
+       LDA   #$FF
+B@     JSR   [DOPAT]
+       LDA   <PATTRN
+       TFR   A,B
+       JSR   [SHOPAT]
+A@     JMP   [MENU]
+
+NOFIT  CLRA
+       JSR   [PAGEIN]
+       JSR   [DIALOG]
+       FCC   "This MGE file is not",13
+       FCC   "compatible with",13
+       FCC   "Color Max Deluxe.",13
+       FCB   0
+       CLRA
+       JSR   [VIEW]
+A@     LDA   $FF00
+       ANDA  #1
+       BNE   A@
+       JMP   AFTLD
+
+NAMBUF RMB   8
+
+RGBCMP
+       FCB   0,14,2,14,5,10,3,16,13,11,30,28,11,12,30,29
+       FCB   17,17,18,34,20,19,34,33,46,45,47,31,46,45,47,46
+       FCB   7,6,21,6,7,24,38,29,26,43,27,43,25,9,41,42
+       FCB   36,35,50,51,53,54,36,37,32,60,49,61,56,59,52,63
+
+CMPRGB
+       FCB   0,2,2,6,0,4,33,32,32,45,5,9,13,8,1,0
+       FCB   7,16,18,21,20,34,38,36,37,44,40,42,11,15,10,27
+       FCB   56,23,19,49,48,55,38,39,37,46,47,41,11,25,24,26
+       FCB   63,58,50,51,62,52,53,60,60,46,61,61,57,59,58,63
+
+COMFL2 FCB   0
+
+       INCL  DISKSTUF.TXT :8
+       INCL  LOAD128.TXT :8
+       INCL  GIFSVE.TXT
+       INCL  LDGIF.TXT
+       INCL  ENCODED.TXT
+
+COMFL3  FCB   0
+
+BUFFER EQU   *
+ 
+       END

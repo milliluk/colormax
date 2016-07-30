@@ -1,0 +1,1113 @@
+       NAM   General purpose graphics routines for the CoCo 3
+
+******************
+*LIST OF ROUTINES*
+******************
+*BOOT3: boots the 320x192
+*STVIEW: set's the screen adrs
+*PAGEIN: page in a screen #
+*PSET: set a point
+*PPOINT: get a point's color
+*CLS: clear screen
+*LINE: draw a line
+*NORMAL: normalizes the MEM MAP
+*BOX: draw a box
+*JOYSTK: reads a joystick device
+*DIALOG: make a dialog box
+*FILLED: filled in boxes
+*POLCAT: It's POLCAT, dummy!
+**********************
+
+
+*******
+*BOOT3*
+*******
+*This call will boot the 320x192
+*mode of the CoCo 3.  Screen
+*start is NOT set!
+*
+*ENTER: None
+*EXIT: None
+
+BOOT3  PSHS  D
+       LDA   #52
+       STA   $FF03
+       LDA   #68
+       STA   $FF90
+       LDD   #$801E
+       STD   $FF98
+       STA   65497
+       PULS  D,PC
+
+******
+*VIEW*
+******
+*ALLOWS VIEW OF A SPECIFIC PAGE
+*0 1 OR 2
+*ENTER:A=#
+*EXIT:NONE
+A@     FDB   $F000,$C000,$D000,$B000,$A000,$9000,$8000,$7000,$6000,$5000,$4000,$3000,$2000,$1000,0
+VIEW   PSHS  X,D
+       LSLA
+       LDX   #A@
+       LDD   A,X
+       STD   $FF9D
+       PULS  X,D,PC
+
+
+
+********
+*STVIEW*
+********
+*Set the viewport to an address
+*given.  Address must be on a
+*8 byte boundry.  Address is
+*entered as an 18 bit value,
+*with the top two bits in B.
+*
+*ENTER: B=top three bits, X=16
+*low bits.
+*EXIT: None
+*
+STVIEW PSHS  X,D
+       PSHS  X,B
+A@     LSR   ,S
+       ROR   1,S
+       ROR   2,S
+       LSR   ,S
+       ROR   1,S
+       ROR   2,S
+       LSR   ,S
+       ROR   1,S
+       ROR   2,S
+       PULS  X,B
+       STX   $FF9D
+       PULS  X,D,PC
+
+
+
+********
+*PAGEIN*
+********
+*
+*This routine will page in one
+*of three possible pages into
+*the CoCo's real memory map
+*at $8000.  NOTE that $FFDF
+*must still be used to access
+*the memory.
+*
+*ENTER: A=page number
+*00=logical $78000, menu/work pg
+*01=logical $60000, full picture
+*02=logical $68000, SHIT page #1
+*03=logical $58000, fonts
+*04=logical $50000, LYNCHBRG.FNT
+*05=logical $48000, SHIT page #2
+*06=logical $40000, overlays
+*07=logical $38000, SHIT page #3
+*08=logical $30000, OOPS
+*09=logical $28000,
+*
+*EXIT: None
+
+A@     FDB   $3C3D,$3E3F
+       FDB   $3031,$3233
+       FDB   $3435,$3637
+       FDB   $2C2D,$2E2F
+       FDB   $2829,$2A2B
+       FDB   $2425,$2627
+       FDB   $2021,$2223
+       FDB   $1C1D,$1E1F
+       FDB   $1819,$1A1B
+       FDB   $1415,$1617
+PAGEIN PSHS  X,A,U
+       LDX   #A@
+       LSLA
+       LSLA
+       LEAX  A,X
+       LDU   ,X
+       STU   $FFA4
+       LDU   2,X
+       STU   $FFA6
+       PULS  X,A,U,PC
+
+
+
+******
+*PSET*
+******
+*
+*Will set a point given at
+*PH1, PV1, with color B
+*
+*draws on current screen in
+*$8000
+*
+*ENTER: [PH1], [PV1], B
+*EXIT: none
+*
+*IMPORTANT: Note that the horz
+*coord is 16 bits and the vert
+*coord is only 8 bits!!!!!!!!
+*
+PSET   PSHS  X,D,Y,U
+       LDD   <PH1 get byte offset
+       LSRA make 0-159
+       RORB
+       LDX   #$8000 start of mem
+       LEAX  D,X add..
+       LDB   <PV1 get vert offset
+       LDA   #160 "
+       MUL         "
+       LEAX  D,X X=screen Loc
+       LDB   #%11110000 left pix
+       LDA   <PH1+1 is left??
+       ANDA  #1 "
+       BEQ   A@ yep.  left.
+       LDB   #%00001111 rgt pix
+A@     STB   <FERPNT
+       PSHS  B save mask
+       LDA   2,S get color
+       LDY   #PCLRS get color
+       ANDB  A,Y from table
+       PULS  A get mask
+       COMA erase color already
+       ANDA  ,X there.
+       PSHS  B add new color
+       ORA   ,S+ "
+       STA   ,X put on screen
+       TST   USEFER
+       BEQ   Y@
+       LDD   #$3435
+       STD   $FFA4
+       LDD   #$3637
+       STD   $FFA6
+       LDA   <FERPNT
+       TFR   A,B
+       COMB
+       ANDB  ,X
+       ANDA  <FERCLR
+       PSHS  B
+       ORA   ,S+
+       STA   ,X
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STD   $FFA6
+Y@     PULS  X,D,Y,U,PC
+*color table for PSET*
+PCLRS  FCB   %00000000 color 0
+       FCB   %00010001 color 1
+       FCB   %00100010 color 2
+       FCB   %00110011 color 3
+       FCB   %01000100 color 4
+       FCB   %01010101 color 5
+       FCB   %01100110 color 6
+       FCB   %01110111 color 7
+       FCB   %10001000 color 8
+       FCB   %10011001 color 9
+       FCB   %10101010 color 10
+       FCB   %10111011 color 11
+       FCB   %11001100 color 12
+       FCB   %11011101 color 13
+       FCB   %11101110 color 14
+       FCB   %11111111 color 15
+
+
+
+********
+*PPOINT*
+********
+*
+*Routine get's a color from the
+*screen, and returns it in B
+*
+*ENTER: [PH1], [PV1]
+*EXIT: COLOR IS IN B
+*
+PPOINT PSHS  X,A,Y,U
+       LDX   #$8000
+       LDD   <PH1
+       LSRA
+       RORB
+       LEAX  D,X
+       LDA   #160
+       LDB   <PV1
+       MUL
+       LDA   D,X
+       LDB   <PH1+1
+       BITB  #1
+       BNE   A@
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+A@     ANDA  #%00001111
+       TFR   A,B
+       PULS  X,A,Y,U,PC
+
+
+*****
+*CLS*
+*****
+*
+*Enter with color in B, and
+*it'll clear the currently
+*mapped screen ($8000) to that
+*color.  (0-15)
+*
+*ENTER: B=color number (0-15)
+*EXIT: None
+*
+CLS    PSHS  X,D,Y,U
+       LDX   #PCLRS
+       LDA   B,X
+       LDB   B,X
+       LDX   #$8000
+A@     STD   ,X++
+       CMPX  #$8000+30720
+       BNE   A@
+       PULS  X,D,Y,U,PC
+
+
+
+******
+*LINE*
+******
+*
+*Draws a line from [LH1], [LV1]
+*to [LH2], [LV2]
+*
+*NOTE: like the other routines,
+*the horizontal data is 16 bits
+*long, and the vertical is 8..
+*
+*ENTER: [LH1],[LV1],[LH2],[LV2]
+*      B=COLOR (0-15)
+*
+*EXIT: The coords in LH, LV may
+*be modified.
+*
+
+
+
+LINE   TST   <LNEWDT
+       BMI   ?RTS
+
+       PSHS  X,D,Y,U
+       LDX   #PCLRS
+       LDB   B,X
+       STB   <FILLC
+       LDX   <LH1
+       CMPX  #320
+       BHS   INVAL
+       LDX   <LH2
+       CMPX  #320
+       BHS   INVAL
+       LDB   <LV1
+       CMPB  #191
+       BHI   INVAL
+       LDB   <LV2
+       CMPB  #191
+       BHI   INVAL
+       LDB   1,S
+       BSR   LINEX
+INVAL  PULS  X,D,Y,U,PC
+
+
+
+LINEX  LDX   #PCLRS
+       LDB   B,X
+       PSHS  B *COLOR MASK*
+
+       LDX   #0
+       STX   SLOPE
+
+
+
+*FIRST, REORGANIZE THE COORDS
+*SO THAT H1 IS LESS THAT H2
+       LDA   <LV1
+       LDB   <LV2
+       LDX   <LH1
+       LDU   <LH2
+       CMPX  <LH2
+       BLO   A@
+       STA   <LV2
+       STB   <LV1
+       STX   <LH2
+       STU   <LH1
+A@
+*NOW H1 < H2
+
+*NOW, TEST TO SEE IF WE HAVE A
+*LINE GOING UP OR GOING DOWN
+
+       LDA   <LV1
+       CMPA  <LV2
+       LBLO  LDWN
+
+
+*DO A LINE DRAWING UP FROM LEFT TO RIGHT*
+
+       LDD   <LH2
+       SUBD  <LH1
+       STD   SLPX
+       LDA   <LV1
+       SUBA  <LV2
+       STA   SLPY
+       LDD   <LH1
+       LSRA
+       RORB
+       LDX   #$8000
+       LEAX  D,X
+       LDA   #160
+       LDB   <LV1
+       MUL
+       LEAX  D,X
+       LDA   <LH1+1
+       ANDA  #1
+       PSHS  A
+
+       LDY   SLPX
+       LEAY  1,Y
+*SO FAR:*
+*X=SCREEN LOCATION*
+*Y=COUNT FOR LOOP*
+*,S=0 OR 1, FOR LEFT/RIGHT DOT
+*1,S=COLOR DOUBLE MASK
+       LDD   SLPX
+       CMPD  SLPY16
+       LBLO  LNLP2S
+
+
+
+
+LNLP1
+C@     LDA   ,S
+       JSR   SETDOT
+
+       LDA   ,S
+       EORA  #1
+       STA   ,S
+       BNE   P@
+       INX
+P@
+
+       LDD   SLOPE
+       ADDD  SLPY16
+       CMPD  SLPX
+       BLO   Z@
+       SUBD  SLPX
+       LEAX  -160,X
+Z@     STD   SLOPE
+
+       LEAY  -1,Y
+       BNE   LNLP1
+       LEAS  2,S
+       RTS
+
+LNLP2S
+       LDY   SLPY16
+       LEAY  1,Y
+
+LNLP2
+       LDA   ,S
+       JSR   SETDOT
+
+       LEAX  -160,X
+
+       LDD   SLOPE
+       ADDD  SLPX
+       CMPD  SLPY16
+       BLO   Z@
+       PSHS  D
+       LDA   2,S
+       EORA  #1
+       STA   2,S
+       BNE   P@
+       INX
+P@
+       PULS  D
+       SUBD  SLPY16
+Z@     STD   SLOPE
+
+       LEAY  -1,Y
+       BNE   LNLP2
+       LEAS  2,S
+       RTS
+
+
+
+LDWN   LDD   <LH2
+       SUBD  <LH1
+       STD   SLPX
+       LDA   <LV2
+       SUBA  <LV1
+       STA   SLPY
+       LDD   <LH1
+       LSRA
+       RORB
+       LDX   #$8000
+       LEAX  D,X
+       LDA   #160
+       LDB   <LV1
+       MUL
+       LEAX  D,X
+
+       LDA   <LH1+1
+       ANDA  #1
+A@     PSHS  A
+
+       LDY   SLPX
+       LEAY  1,Y
+
+       LDD   SLPX
+       CMPD  SLPY16
+       LBLO  LNDLPS
+
+LNDLP
+       LDA   ,S
+       JSR   SETDOT
+
+       LDA   ,S
+       EORA  #1
+       STA   ,S
+       BNE   A@
+       INX
+A@
+
+       LDD   SLOPE
+       ADDD  SLPY16
+       CMPD  SLPX
+       BLO   A@
+       SUBD  SLPX
+       LEAX  160,X
+A@     STD   SLOPE
+
+       LEAY  -1,Y
+       LBNE  LNDLP
+       LEAS  2,S
+       RTS
+
+LNDLPS LDY   SLPY16
+       LEAY  1,Y
+
+LNDLP2 LDA   ,S
+       JSR   SETDOT
+
+       LEAX  160,X
+
+       LDD   SLOPE
+       ADDD  SLPX
+       CMPD  SLPY16
+       BLO   Z@
+       PSHS  D
+       LDA   2,S
+       EORA  #1
+       STA   2,S
+       BNE   P@
+       INX
+P@
+       PULS  D
+       SUBD  SLPY16
+Z@     STD   SLOPE
+
+       LEAY  -1,Y
+       BNE   LNDLP2
+       LEAS  2,S
+       RTS
+
+
+
+
+********
+*NORMAL*
+********
+*
+*This will normalize the memory
+*map.  It returns $78000-$7FFFF
+*to the logical $8000 map adrs.
+*It also will set $FFDE
+*ENTER: Are you kidding??
+*EXIT: Ditto!
+NORMAL PSHS  D
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STA   $FFA6
+       PULS  D
+       STA   $FFDE
+       CLR   $FF98
+       CLR   $FF99
+       LDA   #204
+       STA   $FF90
+       LDX   #$0400
+       LDB   #7
+       JSR   STVIEW
+       RTS
+
+
+
+
+
+*****
+*BOX*
+*****
+*
+*This obviously draws a box
+*using coords [BH1], [BV1]
+*being the upper left hand
+*corner coords, and
+*[BH2], [BV2] being the bottom
+*right coords.
+*
+*ENTER: [BH1],[BV1], [BH2],[BV2]
+*       B=color (0-15)
+*EXIT: none
+*
+*NOTE: like all of the other fucking routines, <BH1 & BH
+
+BOX    PSHS  X,D,Y,U
+       LDX   <BH1
+       STX   <LH1
+       LDA   <BV1
+       STA   <LV1
+       STA   <LV2
+       LDX   <BH2
+       STX   <LH2
+       LDB   1,S
+       JSR   LINE
+
+       LDX   <BH2
+       STX   <LH1
+       STX   <LH2
+       LDA   <BV1
+       STA   <LV1
+       LDA   <BV2
+       STA   <LV2
+       LDB   1,S
+       JSR   LINE
+
+       LDX   <BH1
+       STX   <LH1
+       LDX   <BH2
+       STX   <LH2
+       LDA   <BV2
+       STA   <LV1
+       STA   <LV2
+       LDB   1,S
+       JSR   LINE
+
+       LDX   <BH1
+       STX   <LH1
+       STX   <LH2
+       LDA   <BV1
+       STA   <LV1
+       LDA   <BV2
+       STA   <LV2
+       LDB   1,S
+       JSR   LINE
+       PULS  X,D,Y,U,PC
+
+
+
+********
+*DIALOG*
+********
+*This will create a dialog box
+*on the current screen.
+*
+*ENTER: Call with message
+*following the JSR.  The msg
+*should be ended with a NULL.
+*EXIT: program will resume
+*directly AFTER the msg.
+*
+*NOTE: each line MUST have it's
+*own CR!!!  You cannot terminate
+*the call with a "FCC "test",0"!
+*The proper way is:
+*FCC"test",13,0
+DIALOG PULS  X
+       STX   <DIAZ
+       LDD   #0
+       STD   OFFST
+*COUNT # OF LINES*
+       CLRB
+A@     LDA   ,X+
+       BEQ   B@
+       CMPA  #13
+       BNE   A@
+       INCB
+       BRA   A@
+B@
+
+       PSHS  B
+       LDD   #0
+       STD   DIALEN
+       LDX   <DIAZ
+A@     JSR   FLEN
+       CMPD  DIALEN
+       BLS   K@
+       STD   DIALEN
+K@     TST   ,X
+       BNE   A@
+
+
+
+
+
+*,S= # OF LINES USED
+*[DIALEN] = LONGEST LINE IN MSG
+       LDA   ,S
+       LSRA
+       ADCA  #0
+       LDB   #10
+       MUL
+       PSHS  D
+       LDD   #96
+       SUBD  ,S++
+
+       STB   <LPRTV *FOR PRTLYN
+
+       LDD   DIALEN
+       LSRA
+       RORB DIVIDE BY TWO
+       PSHS  D
+       LDD   #159
+       SUBD  ,S++
+       SUBD  #1
+       STD   <BH1
+
+       LDD   DIALEN
+       LSRA
+       RORB
+       PSHS  D
+       LDD   DIALEN
+       SUBD  ,S++
+       ADDD  #160
+       STD   <BH2
+
+       LDA   ,S
+       LSRA
+       ADCA  #0
+       LDB   #10
+       MUL
+       PSHS  B
+       LDB   #95
+       SUBB  ,S+
+       DECB
+       STB   <BV1
+
+       LDA   ,S
+       LSRA
+       LDB   #10
+       MUL
+       ADDB  #96
+       STB   <BV2
+
+*FINALLY, WE HAVE THE OUTSIDE BOX CALCULATED!
+
+*NOW, CLEAR OUT THE BACKGROUND*
+       LDB   #15
+       JSR   FILLED
+
+       LDB   #15
+       JSR   BOX
+       JSR   MVECRD
+       CLRB
+       JSR   BOX
+       JSR   MVECRD
+       LDB   #15
+       JSR   BOX
+       JSR   MVECRD
+       CLRB
+       JSR   BOX
+       JSR   MVECRD
+       CLRB
+       JSR   BOX
+
+*NOW PRINT THE TEXT*
+       LDX   <DIAZ
+A@     TST   ,X
+       BEQ   F@
+       PSHS  X
+       JSR   FLEN
+       PULS  X
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #160
+       SUBD  ,S++
+       STD   <LPRTH
+R@     LDA   ,X+
+       CMPA  #13
+       BEQ   T@
+       JSR   LYNPRT
+       BRA   R@
+T@     LDA   <LPRTV
+       ADDA  #10
+       STA   <LPRTV
+       BRA   A@
+F@     LEAS  1,S
+       INX
+       TFR   X,PC
+
+
+MVECRD LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       DEC   <BV1
+       INC   <BV2
+       RTS
+
+
+********
+*FILLED*
+********
+*
+*Filled in Boxes
+*
+*ENTER: <BH1, <BV1,  <BH2, <BV2
+*       B=COLOR
+*EXIT: none
+FILLED PSHS  X,D,Y,U
+
+       LDU   #PATBOX
+       CMPB  #16
+       BHS   G@
+       LDX   #PCLRS
+       LDB   B,X
+       LDA   #32
+P@     STB   ,U+
+       DECA
+       BNE   P@
+       BRA   Q@
+G@     SUBB  #16
+       LDA   #32
+       MUL
+       ADDD  #PATS
+       TFR   D,X
+       LDB   #32
+H@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   H@
+Q@
+
+       LDX   <BH1
+       LDY   <BH2
+       CMPX  <BH2
+       BLO   Z@
+       STY   <BH1
+       STX   <BH2
+Z@
+
+       LDA   <BV1
+       LDB   <BV2
+       CMPA  <BV2
+       BLO   Z@
+       STB   <BV1
+       STA   <BV2
+Z@
+
+       LDA   <BH1
+       ANDA  #7
+       LSRA
+       STA   <PATHRZ HORZ OFFSET FOR PATTERN
+       LDA   <BV1
+       ANDA  #7
+       LDB   #4
+       MUL
+       STB   <PATVRT 0-28 VERTICAL OFFSET FOR PATTERN
+
+       LDU   #PATBOX
+       LDD   <BH1
+       LSRA
+       RORB
+       LDX   #$8000
+       LEAX  D,X
+       LDA   <BV1
+       LDB   #160
+       MUL
+       LEAX  D,X
+       PSHS  X
+
+       LDB   #%11111111
+       LDA   <BH1+1
+       LSRA
+       BCC   A@
+       LDB   #%00001111
+A@
+       STB   <LFTMRG
+
+
+       LDB   #%11110000
+       LDA   <BH2+1
+       LSRA
+       BCC   A@
+       LDB   #%11111111
+A@
+       STB   <RGTMRG
+
+       LDB   <BV2
+       SUBB  <BV1
+       CLRA
+       TFR   D,Y
+       LEAY  1,Y
+
+       LDD   <BH1
+       LSRA
+       RORB
+       PSHS  D
+
+       LDD   <BH2
+       LSRA
+       RORB
+       SUBD  ,S++
+       SUBD  #1
+
+       PSHS  B
+A@     BSR   FILLD
+       LDA   <PATVRT
+       ADDA  #4
+       ANDA  #31
+       STA   <PATVRT
+       LDX   1,S
+       LEAX  160,X
+       STX   1,S
+       LEAY  -1,Y
+       BNE   A@
+       LEAS  3,S
+       PULS  X,D,Y,U,PC
+
+
+
+
+FILLD  LDU   #PATBOX
+       LDA   <PATVRT
+       LEAU  A,U
+       LDX   3,S
+       LDA   <LFTMRG
+       TFR   A,B
+       COMB
+       ANDB  ,X
+       PSHS  B
+       LDB   <PATHRZ
+       ANDA  B,U
+       ORA   ,S+
+       STA   ,X+
+       LDB   2,S
+       PSHS  B
+       LDB   <PATHRZ
+A@     TST   ,S
+       BEQ   B@
+       LDA   ,S
+       CMPA  #255
+       BEQ   U@
+       INCB
+       ANDB  #3
+       LDA   B,U
+       STA   ,X+
+       DEC   ,S
+       BRA   A@
+U@     DEX
+B@     LEAS  1,S
+       INCB
+       ANDB  #3
+       LEAU  B,U
+       LDA   <RGTMRG
+       TFR   A,B
+       COMB
+       ANDB  ,X
+       ANDA  ,U
+       PSHS  B
+       ORA   ,S+
+       STA   ,X
+       RTS
+
+SETRGT LDB   <LNEWDT
+       BNE   Z@
+       LDD   #%0000111111110000
+       ANDA  <FILLC
+       ANDB  ,X
+       PSHS  A
+       ORB   ,S+
+       STB   ,X
+       RTS
+Z@     CMPB  #1
+       BNE   Y@
+       TFR   X,U
+       LDB   #2
+       PSHS  B
+K@     LDD   #%0000111111110000
+       ANDA  <FILLC
+       ANDB  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U
+       LDD   #%1111000000001111
+       ANDA  <FILLC
+       ANDB  1,U
+       PSHS  A
+       ORB   ,S+
+       STB   1,U
+       LEAU  160,U
+       DEC   ,S
+       BNE   K@
+       PULS  A,PC
+Y@     CMPB  #2
+       BHI   X@
+       TFR   X,U
+       LDB   #4
+       PSHS  B
+L@     LDD   #%0000111111110000
+       ANDA  <FILLC
+       ANDB  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U
+       LDA   <FILLC
+       STA   1,U
+       LDD   #%1111000000001111
+       ANDB  2,U
+       ANDA  <FILLC
+       PSHS  A
+       ORB   ,S+
+       STB   2,U
+       LEAU  160,U
+       DEC   ,S
+       BNE   L@
+       PULS  A,PC
+X@     TFR   X,U
+       LDB   #8
+       PSHS  B
+J@     LDD   #%0000111111110000
+       ANDA  <FILLC
+       ANDB  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U
+       LDA   <FILLC
+       TFR   A,B
+       STD   1,U
+       STA   3,U
+       LDD   #%1111000000001111
+       ANDA  <FILLC
+       ANDB  4,U
+       PSHS  A
+       ORB   ,S+
+       STB   4,U
+       LEAU  160,U
+       DEC   ,S
+       BNE   J@
+       PULS  A,PC
+
+SETDOT LBNE  SETRGT
+       LDB   <LNEWDT
+       BNE   Z@
+       LDD   #%1111000000001111
+       ANDA  <FILLC
+       ANDB  ,X
+       PSHS  A
+       ORB   ,S+
+       STB   ,X
+       RTS
+Z@     CMPB  #1
+       BNE   Y@
+       LDA   <FILLC
+       STA   ,X
+       STA   160,X
+       RTS
+Y@     CMPB  #2
+       BHI   X@
+       LDA   <FILLC
+       TFR   A,B
+       STD   ,X
+       STD   160,X
+       STD   320,X
+       STD   480,X
+       RTS
+X@     LDA   <FILLC
+       TFR   A,B
+       STD   ,X
+       STD   2,X
+       STD   160,X
+       STD   162,X
+       STD   320,X
+       STD   322,X
+       STD   480,X
+       STD   482,X
+*
+       STD   640,X
+       STD   642,X
+       STD   800,X
+       STD   802,X
+       STD   960,X
+       STD   962,X
+       STD   1120,X
+       STD   1122,X
+       RTS
+
+PATBOX RMB   32 FOR THE FUCKING PATTERN
+
+
+
+
+
+PREROM LDA   #76
+       STA   $FF90
+       PULS  Y
+       LDD   $FFA4
+       LDX   $FFA6
+       PSHS  X,D
+       CLRA
+       FCB   $1F,$8B
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STD   $FFA6
+       STA   $FFDE
+       STA   65496
+       JMP   ,Y
+
+AFTROM PULS  Y
+       STA   65497
+       STA   $FFDF
+       PULS  X,D
+       STD   $FFA4
+       STX   $FFA6
+       LDD   #PGE0
+       FCB   $1F,$8B
+       LDA   #68
+       STA   $FF90
+       JMP   ,Y
+
+Z@     RMB   1
+POLCAT PSHS  X,B,Y,U
+       JSR   PREROM
+       JSR   [$A000]
+       STA   Z@
+       JSR   AFTROM
+       LDA   Z@
+       PULS  X,B,Y,U,PC
+
+DSKCON PSHS  X,D,Y,U
+       JSR   PREROM
+       JSR   [$C004]
+       JSR   AFTROM
+       PULS  X,D,Y,U
+       TST   >$F0
+       BNE   A@
+       RTS
+A@     LDB   #40
+       JMP   CERR
+
+DIALEN RMB   2
+
+       END

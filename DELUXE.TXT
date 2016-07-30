@@ -1,0 +1,936 @@
+       NAM   CWORKS
+
+       INCL  LOWDEFS.TXT
+
+       ORG   $E01
+       INCL  CMAXDEFS.TXT
+
+       FCC   "Hi Don!!"
+
+CWRKS  LDA   #PGE0/256
+       TFR   A,DP
+
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       LDX   OLDJMP
+       LDY   6,X
+       STY   INCNT
+       JSR   INVBOX
+       LDA   #15
+       STA   >ERCOLR
+
+       LDA   >$EB
+       STA   >FNTDRV
+       ADDA  #$30
+       STA   DRIVE
+       CLR   >113
+       LDX   #CERR
+       STX   $18F
+       LDA   #$7E
+       STA   $18E
+
+       JSR   CLOSE
+
+       LDX   #TITLE
+       STX   >TXXXXX
+       LDX   #LYN
+       JSR   LOADST
+
+       JSR   CVRTF
+
+       JSR   BTTXT
+
+       LDA   #15
+       STA   >ERCOLR
+       CLRA
+       JSR   PAGEIN
+       JSR   SHOTIT
+
+       JMP   FIZZLE
+
+LYN    FCC   "LYNCHBRGFNT"
+
+RGBFLG EQU   $E00    0=RGB
+
+       INCL  FIZZLE.TXT :7
+       INCL  RGBCMP.TXT :7
+       INCL  CURSORS.TXT :7
+       INCL  OUTFNT.TXT :8
+       INCL  PULLDOWN.TXT :8
+       INCL  GREGSTUF.TXT :8
+       INCL  WINDOW.TXT :7
+       INCL  CHROUT.TXT :7
+       INCL  ERIKSTUF.TXT :8
+       INCL  ARROW.TXT :7
+       INCL  PATS.TXT :7
+       INCL  PATTERN.TXT :7
+       INCL  LINES.TXT :7
+       INCL  EDITBOX.TXT :7
+       INCL  DEFINE.TXT :7
+       INCL  MOVE.TXT :8
+       INCL  HIRES.TXT :8
+       INCL  SPECIAL.TXT :8
+       INCL  DISKIO.TXT :8
+
+MENU   CLR   COPERR
+       CLR   $FF40
+       CLR   $986
+
+       LDS   #$3FF
+       LDD   #$3839
+       STD   $FFA0
+       LDA   #$3A
+       STA   $FFA2
+
+       CLRA
+       JSR   PAGEIN
+       LDA   #$FF
+       STA   $8000
+
+       LDA   DRIVE
+       SUBA  #$30
+       STA   >$EB
+
+       JSR   MENARW
+
+       LDA   <AY
+       CMPA  #8
+       BHI   Z@
+       LDX   <AX
+       CMPX  #40
+       BHI   Y@
+       JMP   PLFILE
+Y@     CMPX  #8
+       LBLO  Z@
+       CMPX  #73-5
+       LBLO  PLEDIT
+       CMPX  #110+5
+       LBLO  PLMOD
+       CMPX  #164+5
+       LBLO  PLGOOD
+E@     CMPX  #205+21
+       LBLO  PLSPEC
+       CMPX  #254+3
+       LBLO  PLFONT
+       CMPX  #290+6
+       LBLO  PLSTYL
+Z@
+
+*BG COLOR BOX
+       LDX   <AX
+       CMPX  #8
+       BLO   Z@
+       CMPX  #23
+       BHI   Z@
+       LDA   <AY
+       CMPA  #122
+       BLO   Z@
+       CMPA  #144
+       BHI   Z@
+       LDA   <COLOR
+       STA   <ERCOLR
+       JSR   BGBOX
+       JSR   WTBUT
+Z@
+
+       LDX   <AX
+       CMPX  #47
+       BLO   Z@
+       CMPX  #78
+       BHI   Z@
+       LDA   <AY
+       CMPA  #162
+       BLO   Z@
+       CMPA  #182
+       BHI   Z@
+       LDA   <PATNUM
+       EORA  #48 (TOGGLE 16/32)
+       STA   <PATNUM
+       ANDA  #255-16 MAKE A=0 IF A=16 ELSE A SHOULD BE <>0
+       JSR   DOPAT
+       JSR   WTBUT BUTTON UP!
+Z@
+
+*COLORS, @ BOTTOM*
+       LDD   <AX
+       CMPD  #83
+       BLO   Z@
+       CMPD  #305
+       BHI   Z@
+       LDA   <AY
+       CMPA  #162
+       BLO   Z@
+       CMPA  #182
+       BHI   Z@
+       LDD   <AX
+       SUBD  #82
+       LDY   #0
+A@     CMPD  #14
+       BLO   B@
+       LEAY  1,Y
+       SUBD  #14
+       BRA   A@
+B@     TFR   Y,D
+       LDA   <AY
+       CMPA  #172
+       BLO   Y@
+       ADDB  <PATNUM
+Y@     TST   MSGON
+       LBNE  SECRT2
+       JSR   SETPCL
+Z@     CLR   PHASE1
+
+       LDX   <AX
+       CMPX  #8
+       LBLO  ZY
+       CMPX  #39
+       LBHI  ZY
+       LDB   #255
+       LDA   <AY
+       CMPA  #139
+       LBLO  ZY
+       CMPA  #143
+       LBLO  Y@
+       CLRB
+       CMPA  #146
+       LBLO  ZY
+       CMPA  #150
+       LBLO  Y@
+       LDB   #1
+       CMPA  #153
+       LBLO  ZY
+       CMPA  #157
+       LBLO  Y@
+       LDB   #2
+       CMPA  #160
+       LBLO  ZY
+       CMPA  #167
+       LBLO  Y@
+       LDB   #3
+       COM   PHASE1
+       CMPA  #169
+       LBLO  ZY
+       CMPA  #172
+       BLO   Y@
+Y@
+       PSHS  B
+       TST   PHASE2
+       BNE   H@
+       LDA   PHASE1
+       STA   PHASE2
+       BRA   A@
+H@     LDA   WIDTH
+       CMPA  ,S
+       BNE   J@
+       INC   NUMI
+       BRA   A@
+J@     LDA   NUMI
+       CMPA  #3
+       LBNE  PHERR
+       CLR   NUMI
+       LDA   WIDTH
+       INCA
+       ANDA  #3
+       CMPA  ,S
+       BNE   PHERR
+       LDA   ,S
+       CMPA  #2
+       BNE   A@
+       LDA   #255
+       STA   PHASE3
+       BRA   A@
+PHERR  CLR   PHASE1
+       CLR   PHASE2
+       CLR   PHASE3
+       CLR   NUMI
+A@     PULS  B
+       PSHS  D,X
+       JSR   WTBUT
+       PULS  D,X
+       STB   WIDTH
+       JSR   PUTMRK
+ZY
+
+*CHECK*
+*IF THE SYMBOL WAS IN THE <WINDOW>
+*WHEN THE BUTTON WAS PRESSED.
+*IF SO, GOTO <INCNT>
+       LDX   <AX
+       LDD   #43
+       SUBD  <GPNTH
+       PSHS  D
+       CMPX  ,S++
+       LBLO  J@
+       LDD   #311
+       SUBD  <GPNTH
+       PSHS  D
+       CMPX  ,S++
+       LBHI  J@
+       LDA   <AY
+       LDB   #24
+       SUBB  <GPNTV
+       PSHS  B
+       CMPA  ,S+
+       LBLO  J@
+       LDB   #154
+       SUBB  <GPNTV
+       PSHS  B
+       CMPA  ,S+
+       LBHI  J@
+I@     LDA   DEFLSO
+       CMPA  #255
+       BEQ   R@
+       TST   FATFLG
+       BNE   E@
+       JSR   PUT
+       LDA   #1
+       LDB   #8
+       JSR   PCOPY
+R@     LDA   DEFLSO
+       CMPA  #255
+       BEQ   S@
+       LDY   USESYM
+       CMPY  #ARROW
+       LBEQ  MENU
+S@     TST   MSGON
+       BEQ   NBV
+       JSR   ISMSG
+NBV    JSR   FLOW
+       LDA   DEFLSO
+       CMPA  #$FF
+       BEQ   D@
+       PSHS  X
+       LDX   SYM1
+       CMPX  #ARROW
+       PULS  X
+       BEQ   J@
+D@     CLR   PHASE3
+       CLR   MSGON
+       CLR   M33E8
+       JMP   [INCNT]
+E@     JSR   FLOW
+       LDX   INCNT
+       CMPX  #HAND2
+       BEQ   F@
+       CMPX  #PENCIL
+       LBNE  MENU
+F@     LDA   #2
+       JSR   PAGEIN
+       LDA   #1
+       LDB   #8
+       JSR   PCOPY
+       CLRA
+       JSR   PAGEIN
+       CLR   M33E8
+       LDX   INCNT
+       CMPX  #PENCIL
+       LBEQ  FATPEN
+       CMPX  #HAND2
+       LBEQ  FATHND
+Z@     JMP   MENU
+J@
+
+       TST   <AX
+       LBNE  Z@
+       LDA   <AX+1
+       LDB   <AY
+       LDX   #ROUT
+A@     CMPA  ,X
+       LBLO  B@
+       CMPB  1,X
+       LBLO  B@
+       CMPA  2,X
+       LBHI  B@
+       CMPB  3,X
+       LBHI   B@
+       PSHS  X
+       LDX   SYM1
+       CMPX  #ARROW
+       PULS  X
+       LBNE  B@
+       CLR   TYPING
+       LDY   4,X
+       STY   RSCRS
+       LDY   6,X
+       STY   INCNT
+       CMPY  #TYPE
+       BNE   E@
+       COM   TYPING
+E@     LDA   <DEFLSO
+       CMPA  #255
+       BNE   MONEY
+       PSHS  X,D,Y,U
+       JSR   ENDLSO
+       PULS  X,D,Y,U
+MONEY  PSHS  X *Which I'd better make off of this.
+       CMPX  OLDJMP
+       BNE   C@
+       TST   M33ED
+       BEQ   C@
+       LDX   INCNT
+       LDY   #DBCTBL-4
+F@     LEAY  4,Y
+       LDD   ,Y
+       BEQ   C@
+       CMPX  ,Y
+       BNE   F@
+       LEAS  2,S
+       JSR   WTBUT
+       CLR   M33ED
+       CLR   M33E8
+       JMP   [2,Y]
+C@     CLR   ARCFL
+       CLR   RAYFL
+       LDX   OLDJMP
+       JSR   INVBOX
+       PULS  X
+       STX   OLDJMP
+       JSR   INVBOX
+       PSHS  X
+       LDD   <OH1
+       BEQ   K@
+       JSR   PUTOVL
+K@     JSR   WTBUT
+       PULS  X
+       JMP   [4,X]
+B@     LEAX  8,X
+       TST   ,X
+       LBNE  A@
+Z@     JMP   MENU
+
+*DOUBLE CLICK TABLE:
+*THIS HOLDS THE ADDRESSES OF
+*VALID DOUBLE-CLICK ROUTINES AND
+*WHERE THEY SHOULD GO INSTEAD.
+
+*            FROM:  TO:
+DBCTBL FDB   PENCIL,FATBIT
+       FDB   SPRAY,EDBR
+       FDB   HAND2,SHPAGE
+       FDB   BRUSH,SETBRS
+       FDB   DOPNT,A@
+       FDB   RUBLNE,B@
+       FDB   LASSO,LAS3
+       FDB   SHAPE,SHAPE2
+       FDB   ELL1,C@
+       FDB   0,0
+A@     LDA   <PATTRN
+       CMPA  <COLOR
+       LBEQ  MENU
+       JMP   EDPT
+B@     LDA   #$FF
+       STA   RAYFL
+       JMP   MENU
+C@     LDA   #$FF
+       STA   ARCFL
+       JMP   MENU
+
+SHAPE2 LDX   #SHAPE3
+       STX   INCNT
+       JSR   SETCRS
+       JMP   MENU
+
+LAS3   LDX   #LAS2
+       STX   INCNT
+       JSR   SETCRS
+       JMP   MENU
+
+FLOW   LDA   COLOR
+       CMPA  PATTRN
+       BNE   ?RTS
+
+       TST   FLOFLG
+       BEQ   ?RTS
+       TST   VCYC
+       BEQ   ?RTS
+       LDA   COLOR
+       INCA
+       STA   COLOR
+       CMPA  CYCLO
+       BHS   A@
+       LDA   CYCLO
+       STA   COLOR
+       BRA   B@
+A@     CMPA  CYCHI
+       BLS   B@
+       LDA   CYCLO
+       STA   COLOR
+B@     LDA   COLOR
+       STA   PATTRN
+       TFR   A,B
+       JSR   SHOPAT
+       JMP   FGBOX
+
+RSCRS  FDB   SPEN
+INCNT  FDB   PENCIL ADDRESS TO JUMP TO OF CURRENT ROUTINE (USED WHEN BUTTON IS PRESSED WITHIN <WINDOW>)
+
+
+ROUT   FCB   8,13,23,25
+       FDB   SETCRS
+       FDB   LASSO
+
+EDYBOX FCB   23,13,39,25
+       FDB   SETCRS
+       FDB   EDBOX
+
+       FCB   8,25,23,37
+       FDB   HAND1
+       FDB   HAND2
+
+       FCB   23,25,39,37
+       FDB   STTYPE
+       FDB   TYPE
+
+       FCB   8,37,23,49
+       FDB   SETCAN
+       FDB   DOPNT
+
+       FCB   23,37,39,49
+       FDB   SSPR
+       FDB   SPRAY
+
+       FCB   8,49,23,61
+       FDB   SBRUSH
+       FDB   BRUSH
+
+WTHPNC FCB   23,49,39,61
+       FDB   SPEN
+       FDB   PENCIL
+
+       FCB   8,61,23,73
+       FDB   SETCRS
+       FDB   RUBLNE
+
+       FCB   23,61,39,73
+       FDB   SETERS
+       FDB   ERASER
+
+       FCB   8,73,23,85
+       FDB   SETCRS
+       FDB   IBOX
+
+       FCB   23,73,39,85
+       FDB   SETCRS
+       FDB   IBOXF
+
+       FCB   8,85,23,97
+       FDB   SETCRS
+       FDB   RR1
+
+       FCB   23,85,39,97
+       FDB   SETCRS
+       FDB   RR2
+
+       FCB   8,97,23,109
+       FDB   SETCRS
+       FDB   ELL1
+
+       FCB   23,97,39,109
+       FDB   SETCRS
+       FDB   ELL2
+
+       FCB   8,109,23,121
+       FDB   SETCRS
+       FDB   FDRAW
+
+       FCB   23,109,39,121
+       FDB   SETCRS
+       FDB   SHAPE
+
+       FCB   0
+
+SETCRS LDX   #XHAIR
+       LDU   #XHOUT
+       LDD   #$0405
+A@     STD   <GPNT
+       JMP   EGGHED
+HAND1  LDX   #HND1
+       LDU   #HNDOU1
+       LDD   #$0000
+       BRA   A@
+
+HAND2  LDX   WINDOX
+       STX   FXS
+       LDA   WINDOY
+       STA   FYS
+       JSR   PUT
+
+HND2LP LDA   $FF00
+       BITA  #1
+       BEQ   A@
+       JSR   RPLARW
+       JMP   MENU
+A@     JSR   JOYSTK
+       LDD   <JOYX
+       SUBD  <AX
+       COMA
+       COMB
+       ADDD  #1
+       ADDD  FXS
+* MAKE IN THE RANGE OF (0-54)X
+*                      (0-69)Y
+       CMPD  #0
+       BGE   B@
+       LDD   #0
+B@     CMPD  #54
+       BLS   C@
+       LDD   #54
+C@     STD   WINDOX
+*
+       CLRA
+       LDB   FYS
+       PSHS  D
+       LDB   <AY
+       PSHS  D
+       LDB   <JOYY
+       SUBD  ,S++
+       COMA
+       COMB
+       ADDD  #1
+       ADDD  ,S++
+       CMPD  #0
+       BGE   D@
+       LDD   #0
+D@     CMPD  #69
+       BLE   E@
+       LDB   #69
+E@     STB   WINDOY
+*
+       JSR   RPLARW
+       JSR   GET
+       JSR   DRWARW
+       BRA   HND2LP
+
+SETPCL CMPB  #16
+       BHS   A@
+       STB   <COLOR
+       PSHS  B
+       TST   TYPING
+       BEQ   T@
+       JSR   UPDMDE
+T@     PULS  B
+A@     STB   <PATTRN
+       TFR   B,A
+       JSR   SHOPAT
+       JMP   MENU
+
+
+
+BGBOX  LDA   #127
+       STA   <BV1
+       LDA   #130
+       STA   <BV2
+       LDX   #11
+       STX   <BH1
+       LDX   #21
+       STX   <BH2
+       LDB   ERCOLR
+       JSR   FILLED
+       LDA   #126
+       STA   <BV1
+       LDA   #131
+       STA   <BV2
+       LDX   #10
+       STX   <BH1
+       LDX   #22
+       STX   <BH2
+       CLRB
+       JMP   BOX
+FGBOX  LDA   #127
+       STA   <BV1
+       LDA   #130
+       STA   <BV2
+       LDX   #25
+       STX   <BH1
+       LDX   #35
+       STX   <BH2
+       LDB   <COLOR
+       JSR   FILLED
+       DEC   <BV1
+       INC   <BV2
+       LDX   #24
+       STX   <BH1
+       LDX   #36
+       STX   <BH2
+       CLRB
+       JMP   BOX
+
+TITLE  FCC   "Untitled"
+       BSZ   24
+
+SBRUSH
+       LDX   #$6000
+       BRA   A@
+BRUSH  LDX   #$6002
+       BRA   A@
+SETBRS LDX   #$6004
+       BRA   A@
+SETBMH LDX   #$6006
+       BRA   A@
+SETBMV LDX   #$6008
+       BRA   A@
+EDBR   LDX   #$600A
+       BRA   A@
+EDPT   LDX   #$600C
+       BRA   A@
+SSPR   LDX   #$600E
+       BRA   A@
+SPRAY  LDX   #$6010
+A@     CLRA
+       STA   $FFA3
+       JMP   [,X]
+
+SAVGIF LDX   #$6018
+       BRA   A@
+LODGIF LDX   #$601A
+       BRA   A@
+LODPAT LDX   #$6014
+       BRA   A@
+SAVPAT LDX   #$6016
+       BRA   A@
+DS69   LDX   #$6012
+       BRA   A@
+LOAD   LDX   #$6000
+       BRA   A@
+SAVE   LDX   #$6002
+       BRA   A@
+SAVEAS LDX   #$6004
+A@     LDA   #3
+       STA   $FFA3
+       JMP   [,X]
+
+CYCPAL RMB   16
+
+FATHND LDX   #$6000
+       BRA   A@
+FATPEN LDX   #$6002
+       BRA   A@
+FATBIT LDA   <DEFLSO
+       CMPA  #255
+       BNE   B@
+       JSR   ENDLSO
+B@     LDX   #$6004
+       BRA   A@
+NEWWND LDX   #$6006
+A@     LDA   #1
+       STA   $FFA3
+       JMP   [,X]
+
+SETPAL TST   FATFLG
+       BEQ   A@
+       TST   PHASE3
+       BEQ   A@
+       LDA   #255
+       STA   MSGON
+       BRA   B@
+A@     CLR   MSGON
+B@     LDA   #4
+       STA   $FFA3
+       JMP   [$6000]
+
+RR1    LDX   #$6000
+       BRA   A@
+RR2    LDX   #$6002
+       BRA   A@
+ELL1   LDX   #$6004
+       BRA   A@
+ELL2   LDX   #$6006
+A@     LDA   #2
+       STA   $FFA3
+       JMP   [,X]
+
+INVO   LDX   #$6000
+       FCB   $10
+FILLO  LDX   #$6002
+       FCB   $10
+THICK  LDX   #$6004
+       FCB   $10
+TRACE  LDX   #$6006
+       FCB   $10
+FLIPH  LDX   #$6008
+       FCB   $10
+FLIPV  LDX   #$600A
+       FCB   $10
+CHGC   LDX   #$600C
+       FCB   $10
+TILTH  LDX   #$600E
+       FCB   $10
+TILTV  LDX   #$6010
+       FCB   $10
+STRTCH LDX   #$6012
+       FCB   $10
+       LDX   #$6014
+       FCB   $10
+SHAD   LDX   #$6016
+       FCB   $10
+BHORZ  LDX   #$6018
+       FCB   $10
+BVERT  LDX   #$601A
+       FCB   $10
+CUT    LDX   #$601C
+       FCB   $10
+COPY   LDX   #$601E
+       BRA   A@
+PASTE  JSR   PASTE2
+       LDX   #$6020
+       FCB   $10
+CLROV  LDX   #$6022
+       FCB   $10
+INCNUM LDX   #$6024
+A@     LDA   #6
+       STA   $FFA3
+       JMP   [,X]
+
+
+A@     FCC   "Greg Miller and Erik Gavriluk"
+B@     FCC   "Erik Gavriluk and Greg Miller"
+INFO   CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDA   #2
+       JSR   PAGEIN
+       LDX   #A@
+       LDY   #C@
+       LDB   #29
+       LDA   275
+       EORA  #1
+       STA   275
+       LDA   275
+       LSRA
+       BCC   R@
+       LDX   #B@
+R@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   R@
+       JSR   DIALOG
+       FCC   "Color Max Deluxe 1.02",13
+       FCC   " ",13
+       FCC   "Written and Copyright 1987 by",13
+C@     FCC   "---- THIS SPACE FOR RENT ----",13
+       FCC   "All Rights Reserved",13
+       FCC   " ",13
+       FCC   "The future of this product and",13
+       FCC   "its revisions depends on you.",13
+       FCC   "Spread the word, not the program.",13,0
+
+       LDA   #2
+       JSR   VIEW
+
+       JSR   MVEARW
+       JSR   WTBUT
+       CLRA
+       JSR   PAGEIN
+       JSR   VIEW
+       JMP   MENU
+
+DOPNT  LDX   #$6000
+       FCB   $10
+SHAPE  LDX   #$6002
+       FCB   $10
+FDRAW  LDX   #$6004
+       FCB   $10
+LASSO  LDX   #$6006
+       FCB   $10
+LAS2   LDX   #$600C
+       FCB   $10
+ENDLSO LDX   #$600E
+       FCB   $10
+SHAPE3 LDX   #$6010
+       FCB   $10
+ROTATE LDX   #$6012
+       LDA   #5
+       STA   $FFA3
+       JMP   [,X]
+
+PASTE2           PSHS        A,B,X,Y,U                            *4E27: 34 76          '4v'
+ LDA         DEFLSO                              *4E29: B6 0C CA       '...'
+ CMPA        #$FF                                 *4E2C: 81 FF          '..'
+ BNE         A@                                   *4E2E: 26 0D          '&.'
+ LDA         $FFA3                                *4E30: B6 FF A3       '...'
+ PSHS        A                                    *4E33: 34 02          '4.'
+ JSR         ENDLSO                                *4E35: BD 4E 15       '.N.'
+ PULS        A                                    *4E38: 35 02          '5.'
+ STA         $FFA3                                *4E3A: B7 FF A3       '...'
+A@              PULS        A,B,X,Y,U,PC                         *4E3D: 35 F6          '5.'
+
+
+PHASE1 FCB   0
+PHASE2 FCB   0
+PHASE3 FCB   0
+NUMI   FCB   0
+
+        INCL  MAIN.TXT :7
+
+MSG1   FCB   0
+
+ISMSG  TST   PHASE3
+       BEQ   ?RTS
+       TST   FATFLG
+       BEQ   ?RTS
+       JMP   SECRT
+
+MSGON  FCB   0
+
+C2BUF  RMB   128
+C4BUF  RMB   128
+
+       INCL  PRTLYN.TXT :7
+
+SECRT2 CMPB  #15
+       LBHI  MENU
+       PSHS  B
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       PULS  B
+       LDA   #3
+       STA   $FFA3
+       LDX   $601C
+       ASLB
+       ABX
+       LDY   2,X
+       PSHS  Y
+       LDX   ,X
+       LDA   #$BD
+       STA   X@
+       LDY   #DIALOG
+       STY   Y@
+       LDU   #Z@
+       LDD   #$200D
+       STD   ,U++
+       CLR   ,-S
+A@     LDA   ,X+
+       EORA  ,S
+       STA   ,U+
+       STA   ,S
+       CMPX  1,S
+       BLO   A@
+       LDA   #13
+       STA   ,U+
+       LDD   #$200D
+       STD   ,U++
+       CLR   ,U+
+       LDA   #$7E
+       STA   ,U+
+       LDY   #B@
+       STY   ,U
+       CLRA
+       JSR   PAGEIN
+       JMP   X@
+B@     CLRA
+       JSR   VIEW
+C@     LDA   $FF00
+       LSRA
+       BCS   C@
+       JSR   WTBUT
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       JMP   MENU
+X@     RMB   1
+Y@     RMB   2
+Z@     RMB   124
+
+       END   CWRKS

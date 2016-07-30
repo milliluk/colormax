@@ -1,0 +1,54 @@
+       NAM   CHROUT
+
+PRINT  RTS
+
+* OUTPUT A CHARACTER
+*
+* CURSRX,CURSRY=CURSOR POSITION
+* SET=ADDRESS OF CHARACTER SET
+* OFFST=VERTICAL OFFSET (*160)
+* ENTRY: A=CHARACTER TO PRINT
+*  EXIT: CC MODIFIED
+SQUIGL FCB   $FF   0=SQUIGGLE IT
+CURSRX FCB   0     0-40
+CURSRY FCB   0     0-24
+
+SET    FDB   0
+OFFST  FDB   0
+
+CHROUT RTS
+
+* THIS ROUTINE TAKES THE BYTE
+* IN "A", EXPANDS IT TO FIT THE
+* REAL SCREEN, (4 BITS PER
+* PIXEL) AND STORES IT
+* AT U, U+1, U+2, AND U+3
+CHR2   PSHS  D
+       BSR   C4X
+       BSR   C4X
+       STB   ,U
+       BSR   C4X
+       BSR   C4X
+       STB   1,U
+       BSR   C4X
+       BSR   C4X
+       STB   2,U
+       BSR   C4X
+       BSR   C4X
+       STB   3,U
+       PULS  D,PC
+
+* THIS ROUTINE DOES THE ACTUAL
+* 4X EXPANSION
+C4X    ROL   2,S
+       TFR   CC,A
+       ROLB
+       TFR   A,CC
+       ROLB
+       TFR   A,CC
+       ROLB
+       TFR   A,CC
+       ROLB
+       RTS
+
+       END

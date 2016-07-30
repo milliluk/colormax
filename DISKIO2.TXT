@@ -1,0 +1,464 @@
+       NAM   DISKIO
+*(C) 1986 BY GREG MILLER*
+* Modified: 9/28/87 *
+DF     EQU   56
+NE     EQU   52
+IO2    EQU   40
+
+OPENI2 PSHS  X,D,Y,U
+       BSR   OPENI1
+       PULS  X,D,Y,U,PC
+
+OPENI1 LDX   #$94C
+       JSR   PARSE
+*FIND DIR ENTRY
+       LEAX  11,X
+       LDD   ,X
+       STD   FTYPE
+       STD   $957
+       LDD   3,X
+       STD   BLSECT
+       LDA   2,X
+       STA   GRAN
+       JSR   GRNTRK
+       STD   >$EC
+       PSHS  D
+       LDX   #$600
+       STX   >$EE
+       JSR   DSKON2 GET FDATA!
+       LDX   #$700
+       STX   >$EE
+       LDX   #$1102
+       STX   >$EC
+       JSR   DSKON2 GET GAT
+       PULS  D
+       STD   >$EC
+       LDA   GRAN
+       STA   GRANX
+       LDX   #$700
+       LDA   A,X
+       STA   GRAN
+       LDX   #$600
+       STX   DATPNT
+       CLR   EOFFLG
+       CLR   >$70
+       LDA   #'I
+       STA   OPSTAT
+       RTS
+OPSTAT FCB   0
+*OPSTAT=0 IF ALL CLOSED
+*='I IF OPEN FOR INPUT
+*='O IF OPEN FOR OUTPUT
+
+GRANX  FCB   0
+*EOF FLAG.. 0=NOT, 255=YES!
+EOFFLG FCB   0
+*LGRN=FLAG FOR "LAST GRAN"
+LGRN2  RMB   1
+
+
+GETBYT PSHS  X,B,Y,U
+       BSR   GETBY1
+       PULS  X,B,Y,U,PC
+
+GETBY1 CLR   EOFFLG
+       CLR   >$70
+       PSHS  X,B,Y,U
+       CLR   LGRN2
+       LDA   GRAN
+       CMPA  #$C0
+       BLO   D@
+       STA   LGRN2
+D@     LDX   DATPNT
+       LDA   ,X+
+       STX   DATPNT
+       PSHS  A
+       TST   LGRN2
+       BEQ   E@
+       LDA   LGRN2
+       SUBA  #$C0
+       PSHS  A
+       LDA   >$ED
+       CMPA  #10
+       BLO   F@
+       SUBA  #9
+F@     CMPA  ,S+
+       BNE   E@
+       LDD   BLSECT
+       BEQ   GEND
+       TFR   X,D
+*
+       SUBD  #$600
+       CLRA
+*
+       CMPD  BLSECT
+       BLO   E@
+GEND   LDA   #255
+       STA   EOFFLG
+       STA   >$70
+       BRA   C@
+E@     CMPX  #$700
+       BHS   A@
+C@     PULS  A
+       PULS  X,B,Y,U,PC
+A@     LDX   #$600
+       STX   >$EE
+       STX   DATPNT
+       LDA   >$ED
+       CMPA  #9
+       BEQ   R@
+       CMPA  #18
+       BEQ   R@
+       INCA
+       STA   >$ED
+       BRA   S@
+R@     LDA   GRAN
+       JSR   GRNTRK
+       STD   >$EC
+       JSR   DSKON2
+       LDA   GRAN
+       LDY   #$700
+       LDA   A,Y
+       STA   GRAN
+       BRA   C@
+S@     LDA   #2
+       STA   >$EA
+       JSR   DSKON2
+       TST   LGRN2
+       BEQ   C@
+       LDA   >$ED
+       CMPA  #10
+       BLO   WE1
+       SUBA  #9
+WE1    LDA   GRAN
+       ANDA  #15
+       BEQ   WEZ
+       PSHS  A
+       LDA   GRAN
+       ANDA  #15
+       CMPA  ,S+
+       BNE   C@
+       PSHS  D
+       LDD   BLSECT
+       PULS  D
+       BNE   C@
+WEZ    LDA   #255
+       STA   >$70
+       STA   EOFFLG
+       BRA   C@
+
+
+
+
+
+*DATPNT=POINTER TO NEXT BYTE IN DATA... WHEN REACHES $700, NEXT TRACK, SECTOR ARE READ IN..
+DATPNT RMB   2
+FTYPE  RMB   2
+*GRAN=NEXT GRAN DOWN THE LINE
+GRAN   RMB   1
+
+
+
+*ENTER A (GRAN)
+*EXIT A,B (T,S)
+GRNTRK TFR   A,B
+       LSRA *DIV BY 2
+       ANDB  #1
+       BEQ   B@
+       LDB   #10
+       BRA   C@
+B@     LDB   #1
+C@     CMPA  #17
+       BLO   ?RTS
+       INCA
+       RTS
+
+*ENTER A,B (T,S)
+*EXIT-A (GRAN)
+TRKGRN CMPA  #18
+       BLO   A@
+       DECA
+A@     LSLA
+       CMPB  #10
+       BLO   ?RTS
+       INCA
+       RTS
+
+
+
+*parse.. PARSES FOR THE FILENAME IN THE DIRECTORY
+*TO ENTER-X POINTS TO 13 CHAR FILENAME
+*ON EXIT, X=POINTER TO FILENAME
+*FROM DISK--IN MEMORY.. ALL
+*OTHERS PRESERVED
+PARSE  BSR   PARSE2
+       CMPX  #0
+       BNE   ?RTS
+       LDB   #NE
+       JMP   ERRLP
+*PARSE2...
+*X=0 THEN NON EXISTANT
+*X<>0 THEN FILENAME @ X
+PARSE2 PSHS  D,Y,U,CC,DP
+       PSHS  X
+       LDD   #$1103
+       STD   >$EC
+       DECB
+       STB   >$EA
+       LDX   #$600
+       STX   >$EE
+PLP1   JSR   DSKON2
+       LDY   #$600
+PLP2   TST   ,Y
+       BMI   NEERR
+       BEQ   B@
+       LDX   ,S
+       LDB   #11
+A@     LDA   ,X+
+       CMPA  ,Y+
+       BNE   B@
+       DECB
+       BNE   A@
+*GOOD FNAME
+       LEAS  2,S
+       TFR   Y,D
+       ANDB  #%11100000
+       TFR   D,X
+       PULS  D,Y,U,CC,DP,PC
+B@     TFR   Y,D
+       ANDB  #%11100000
+       TFR   D,Y
+       LEAY  32,Y
+       CMPY  #$700
+       BNE   PLP2
+       INC   >$ED
+       BRA   PLP1
+NEERR  LEAS  2,S
+       LDX   #0
+       PULS  D,Y,U,CC,DP,PC
+
+
+
+
+
+
+DSKON2
+       JSR   DSKCON
+       TST   >$F0
+       BEQ   ?RTS
+       LDB   #IO2 *GEN. ?IO ERROR
+       JMP   ERRLP
+
+BLSECT RMB   2
+
+KILL   LDX   #$94C
+       JSR   PARSE
+       CLR   ,X
+       LDA   13,X
+       PSHS  A
+       LDA   #3
+       STA   >$EA
+       JSR   DSKON2
+       LDA   #2
+       STA   >$ED
+       STA   >$EA
+       LDX   #$700
+       STX   >$EE
+       JSR   DSKON2
+       PULS  A
+A@     LDB   A,X
+       PSHS  B
+       LDB   #255
+       STB   A,X
+       PULS  B
+       TFR   B,A
+       CMPB  #192
+       BLO   A@
+       LDA   #3
+       STA   >$EA
+       JSR   DSKON2
+       DEC   >$EA
+       RTS
+
+
+OPENO2 PSHS  X,D,Y,U
+       BSR   OPENO1
+       PULS  X,D,Y,U,PC
+
+
+M@     JSR   KILL
+OPENO1 LDX   #$94C
+       JSR   PARSE2
+       CMPX  #0
+       BNE   M@
+       LDA   #'O
+       STA   OPSTAT
+       LDD   #$1102
+       STD   >$EC
+       STB   >$EA
+       LDX   #$700
+       STX   >$EE
+       JSR   DSKON2
+       DEC   >$EE
+       INC   >$ED
+       JSR   DSKON2
+A@     LDY   #$600
+B@     TST   ,Y
+       BMI   C@
+       BEQ   C@
+       LEAY  32,Y
+       CMPY  #$700
+       BNE   B@
+       INC   >$ED
+       JSR   DSKON2
+       BRA   A@
+C@     STY   INMEM
+       LDD   >$EC
+       STD   TSEC2
+       JSR   FGRN
+       STA   FIRSTG
+       STA   GRAN
+       LDY   #$700
+       CLR   A,Y
+       LDU   #$600
+       STU   OPOINT
+       JSR   GRNTRK
+       STD   >$EC
+       LDA   #1
+       STA   SECTOR
+       LDA   >$EA
+       CMPA  #2
+       BNE   D@
+       RTS
+D@     RTS
+       
+OPOINT RMB   2
+SECTOR RMB   1
+
+U@     LDX   #$600
+       STX   OPOINT
+       STX   >$EE
+       LDA   #3
+       STA   >$EA
+       JSR   DSKON2
+       DEC   >$EA
+       INC   >$ED
+       RTS
+WRTBY2
+       PSHS  X,D,Y,U
+       BSR   OUTB
+       PULS  X,D,Y,U,PC
+OUTB   LDX   OPOINT
+       STA   ,X+
+       STX   OPOINT
+       CMPX  #$700
+       BNE   ?RTS
+       LDA   SECTOR
+       INCA
+       STA   SECTOR
+       CMPA  #10
+       BNE   U@
+       LDX   #$600
+       STX   >$EE
+       STX   OPOINT
+       LDA   #3
+       STA   >$EA
+       JSR   DSKON2
+       LDA   #1
+       STA   SECTOR
+       DEC   >$EA
+       JSR   FGRN
+       LDB   GRAN
+       LDY   #$700
+       STA   B,Y
+       CLR   A,Y
+       STA   GRAN
+       JSR   GRNTRK
+       STD   >$EC
+       JSR   DSKON2
+       RTS
+
+FGRN   PSHS  X,B,Y,U
+       LDY   #$700
+       LDB   #68
+A@     LDA   ,Y
+       CMPA  #255
+       BEQ   B@
+       LEAY  1,Y
+       DECB
+       BNE   A@
+       LDB   #DF
+       JMP   ERRLP
+B@     TFR   Y,D
+       TFR   B,A
+       PULS  X,B,Y,U,PC
+
+
+FIRSTG RMB   1
+INMEM  RMB   2
+TSEC2  RMB   2
+
+
+CLOSE2 PSHS  X,D,Y,U
+       BSR   CLOSE1
+       PULS  X,D,Y,U,PC
+
+CLOSE1 LDA   OPSTAT
+       CMPA  #'I
+       BEQ   ?RTS
+       TST   OPSTAT
+       BEQ   ?RTS
+       CLR   OPSTAT
+       LDX   #$600
+       STX   >$EE
+       LDA   #3
+       STA   >$EA
+       LDD   >$EC
+       JSR   DSKON2 *OUT LAST BYTES
+       LDA   SECTOR
+       ORA   #192
+       LDB   GRAN
+       LDY   #$700
+       STA   B,Y
+       LDX   #$700
+       STX   >$EE
+       LDD   #$1102
+       STD   >$EC
+       INCB
+       STB   >$EA
+       JSR   DSKON2
+       LDD   TSEC2
+       STD   >$EC
+       LDA   #2
+       STA   >$EA
+       LDX   #$600
+       STX   >$EE
+       JSR   DSKON2
+       LDX   INMEM
+       LDY   #$94C
+A@     LDA   ,Y+
+       STA   ,X+
+       CMPY  #$959
+       BNE   A@
+       LDX   INMEM
+       LDA   FIRSTG
+       STA   13,X
+       LDD   OPOINT
+       SUBD  #$600
+       STD   14,X
+       LDA   #3
+       STA   >$EA
+       JSR   DSKON2
+       DEC   >$EA
+       RTS
+
+ERRLP  CLR   OPSTAT
+       JSR   $18E
+*      JMP   $AC46
+
+RBYTE  FDB   0
+RSEC   FCB   0
+RGRN   FCB   0
+
+
+       END

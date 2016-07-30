@@ -1,0 +1,994 @@
+       NAM   MAIN2
+
+* 0'S MEAN VALID OPTION
+* FF'S MEAN SQUIGGLE THE LINES
+Z@     FCB   0,0,0
+Y@     FCB   0,0,0,0,0,0,0,0,0
+       FCB   0,0
+DMPYN  FCB   0,0
+PLFILE LDA   <FLNAMD
+       STA   Y@-1
+       LDX   #2
+       STX   PDX1
+       CLR   Y@+7
+       LDA   <DEFLSO
+       CMPA  #$FF
+       BNE   X@
+       STA   Y@+7
+X@     LDX   #Z@
+       JSR   PULLDN
+       FCC   "\Clear page",0
+       FCC   "\Load page",0
+       FCC   "\Save page",0
+       FCC   "\Save as...",0
+C@     FCC   "_Compression",0
+       FCC   "\Drive #"
+DRIVE  FCC   /0/,0
+       FCC   "\--------------",0
+       FCC   "\Load GIF",0
+       FCC   "\Save GIF",0
+       FCC   "\Load DS-69",0
+       FCC   "\Load font",0
+       FCC   "\Load pattern",0
+       FCC   "\Save pattern",0
+       FCC   "\About...",0
+       FCC   "\Print",0
+       FCC   "\Quit",0,0
+       FDB   CLEAR,LOAD,SAVE
+       FDB   SAVEAS,B@,SDRV
+       FDB   0,LODGIF,SAVGIF,DS69
+       FDB   LODFNT
+       FDB   LODPAT,SAVPAT
+       FDB   INFO,PRNT,A@
+       JMP   MENU
+A@     JSR   NORMAL
+       STA   $FFDE
+       STA   65496
+       CLR   >113
+       JMP   [$FFFE]
+B@     COM   <COMFLG
+       LDX   #C@
+       JSR   TOGCHK
+       JMP   MENU
+
+A@     LDX   $600C
+       LDY   $600E
+       LDD   #'LO
+       STD   1,X
+       STD   ,Y
+       LDD   #'AD
+       STD   3,X
+       STD   2,Y
+B@     CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDA   FNTDRV
+       STA   >$EB
+       JSR   [$6006]   GETDIR
+       JSR   [$6008]   GETFLS
+       JSR   [$600A]   DSKJOY
+       CMPY  #1
+       BNE   C@
+D@     LDA   #2
+       CLRB
+       JSR   PCOPY
+       JMP   MENU
+C@     TST   [$6010] FILENT
+       BEQ   D@
+       RTS
+LODFNT CLR   <FLNAMD
+       LDA   #3 *DISK FILES*
+       STA   $FFA3
+       LDD   #'FN
+       STD   $954
+       LDA   #'T
+       STA   $956
+       BSR   A@
+       JSR   FNTCHK
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       LDX   #PLBURG
+       JSR   FNTCHK
+       LDX   $6010 FILENT
+       JMP   LOADST
+
+NODLG  FCB   0
+       FDB   DMPYN
+
+PNME
+A@     FCC   "PRINTER "
+DODUMP
+DODMP  LDA   #255
+       STA   NODLG
+       BRA   B@
+PRNT   CLR   NODLG
+B@
+       JSR   UPDTE
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDX   #A@
+       LDD   #'DM
+       STD   $954
+       LDA   #'P
+       STA   $956
+       LDU   #$94C
+       LDB   #8
+C@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   C@
+       LDS   #$3FF
+       LDA   FNTDRV
+       STA   >$EB
+       JSR   OPENI
+       LDB   #5
+PRNT3  JSR   GETBYT
+       DECB
+       BNE   PRNT3
+       LDX   #$400
+PRNT2  JSR   GETBYT
+       STA   ,X+
+       TST   >$70
+       BPL   PRNT2
+       JSR   CLOSE
+       CLR   $FF40
+       CLR   $986
+       CLRA
+       TST   NODLG
+       BNE   R@
+       JSR   DIALOG
+       FCB   32,13
+       FCC   /      Printing...      /,13
+       FCB   32,13,0
+       LDA   #1
+R@     JSR   PAGEIN
+       JSR   $400
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       JSR   WTBUT
+       JMP   MENU
+
+SDRV   JSR   POLCAT
+       BEQ   B@
+       CMPA  #72
+       LBEQ  C@
+       CMPA  #'3
+       BHI   B@
+       CMPA  #'0
+       BLO   B@
+       STA   DRIVE
+       BRA   A@
+B@     INC   DRIVE
+       LDA   DRIVE
+       CMPA  #'4
+       BLO   A@
+       LDA   #'0
+       STA   DRIVE
+A@     JMP   MENU
+C@     JSR   POLCAT
+       BEQ   C@
+       PSHS  A
+D@     JSR   POLCAT
+       BEQ   D@
+       SUBA  #48
+       PSHS  A
+       LDA   1,S
+       SUBA  #48
+       LDB   #10
+       MUL
+       ADDB  ,S++
+       ADDB  #48
+       STB   DRIVE
+       JMP   MENU
+ 
+Z@     FCB   0,0
+Y@     FCB   0,0,0,0,0
+PLEDIT LDA   #$FF
+       LDX   <OH1
+       BEQ   B@    NO UNDO FOR
+       CLRA
+B@     STA   Z@+2  clear
+       STA   Z@+3  cut
+       STA   Z@+4  copy
+       CLR   Z@+5
+       TST   >FATFLG
+       BEQ   C@
+       LDA   #$FF
+       STA   Z@+5
+*
+C@     LDX   #33+3
+       STX   PDX1
+       CLRB
+       LDA   <DEFLSO
+       CMPA  #$FF
+       BNE   D@
+       LDB   #$FF
+D@     STB   Y@+4
+       LDX   #Z@
+       JSR   PULLDN
+       FCC   "Undo",0
+       FCC   "-----------",0
+       FCC   "Clear",0
+       FCC   "Cut",0
+       FCC   "Copy",0
+       FCC   "Paste",0
+       FCC   "Overlay #"
+OVNUM  FCC   "0",0,0
+       FDB   OOPS,0,CLROV
+       FDB   CUT,COPY,PASTE
+       FDB   INCNUM
+       JMP   MENU
+
+Z@     FCB   0,0,0,0
+Y@     FCB   0,0,0
+       FCB   0,0
+X@     FCB   0,0
+PLGOOD LDD   #0
+       STD   Z@+3
+       STD   Z@+5
+       STD   Z@+7
+       LDX   #121
+       STX   PDX1
+       LDA   CYCFLG
+       CMPA  #$ff
+       BEQ   E@
+       CLRA
+E@     STA   Z@+10
+       LDA   FATFLG
+       COMA
+B@     STA   Z@+2
+       CLRB
+       LDA   <PATTRN
+       CMPA  <COLOR
+       BEQ   J@
+       LDB   #$FF
+*B=0 IF COLOR SELECTED
+J@     TST   Z@+10
+       BNE   K@
+       STB   X@+1  SET PALETTE
+K@     COMB
+       STB   Y@    EDIT PATTERN
+*
+       LDB   <DEFLSO
+       CMPB  #$FF
+       BNE   C@
+       STB   Z@+10
+       STB   Z@+3
+       STB   Z@+4
+       STB   Z@+5
+       STB   Z@+6
+       STB   Z@+7
+       STB   Z@+8
+C@     LDX   #Z@
+       JSR   PULLDN
+GDCHK  FCC   "\Grid",0
+FTCHK  FCC   "\Fat bits",0
+       FCC   "\Move window",0
+       FCC   "\Show page",0
+       FCC   "\Edit pattern",0
+       FCC   "\Edit brush",0
+       FCC   "\Brush shape",0
+PBMH   FCC   "\Brush mirror H",0
+PBMV   FCC   "\Brush mirror V",0
+       FCC   "\Set background",0
+       FCC   "\Set palette",0,0
+       FDB   GRID,FATBIT,NEWWND
+       FDB   SHPAGE,EDPT,EDBR,SETBRS,SETBMH,SETBMV,A@,SETPAL
+       JMP   MENU
+A@     CLRA
+       JSR   PAGEIN
+       LDA   <COLOR
+       STA   <ERCOLR
+       JSR   BGBOX
+       JMP   MENU
+
+* SHOW PAGE:
+SHPAGE JSR   UPDTE
+       LDA   #%00111110
+       STA   $FF99
+       LDA   #1
+       JSR   VIEW
+       JSR   PAGEIN
+
+       LDD   USESYM
+       LDX   USESY2
+       LDY   USEOUT
+       LDU   USEOU2
+       PSHS  D,X,Y,U
+       LDX   #ARROW
+       STX   USESYM
+       LDX   #ARR2
+       STX   USESY2
+       LDX   #AROUT
+       STX   USEOUT
+       LDX   #AROU2
+       STX   USEOU2
+       JSR   MENARW
+       PULS  D,X,Y,U
+       STD   USESYM
+       STX   USESY2
+       STY   USEOUT
+       STU   USEOU2
+
+       JSR   WTBUT
+       LDA   #%00011110
+       STA   $FF99
+       CLRA
+       JSR   VIEW
+       JMP   MENU
+
+* GRID FLAG
+GRIDFL FCB   0
+GRID   COM   GRIDFL
+       LDX   #GDCHK
+       JSR   TOGCHK
+       JMP   MENU
+
+* UPDATES FULL PAGE
+UPDTE  CLRA
+       JSR   PAGEIN
+       TST   FATFLG
+       BEQ   A@
+       JSR   GET
+       LDA   #'\
+       STA   FTCHK
+       CLR   FATFLG
+A@     LDX   <OH1
+       BEQ   B@
+       JSR   PUTOVL
+B@     LDA   <DEFLSO
+       CMPA  #255
+       BNE   C@
+       JSR   ENDLSO
+C@     JMP   PUT
+
+Z@     FCB   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+PLFONT LDX   #171+45
+       STX   PDX1
+       LDA   FNTDRV
+       STA   >$EB
+       LDX   #Z@
+       JSR   PULLDN
+PLBURG FCC   "_Lynchburg  ",0
+       FCC   "\GRAND LEDGE",0
+       FCC   "\SAN PABLOS ",0
+       FCC   "\PRINCETON  ",0
+       FCC   "\MONTAUK    ",0
+       FCC   "\NEW YORK   ",0
+       FCC   "\LANSING    ",0
+       FCC   "\-----------",0
+       FCC   "\NORTHPORT  ",0
+       FCC   "\CHICAGO    ",0
+       FCC   "\LOUISVILLE ",0
+       FCC   "\SYDNEY     ",0
+       FCC   "\DUBLIN     ",0
+       FCC   "\CLEVELAND  ",0
+       FCC   "\ATLANTA    ",0
+       FCB   0
+       FDB   A@,A@,A@,A@,A@,A@,A@,0,A@,A@,A@,A@
+       FDB   A@,A@,A@
+       JMP   MENU
+A@     LDX   #PLBURG
+       PSHS  X
+
+       BSR   FNTCHK
+       BRA   Z@
+FNTCHK LDA   #'\
+       LDB   #15
+A@     STA   ,X
+       LEAX  13,X
+       DECB
+       BNE   A@
+       RTS
+Z@     PULS  X
+       LDA   WHICH1
+       LDB   #13
+       MUL
+       ABX
+       LDA   #'_
+       STA   ,X
+
+       LDA   WHICH1
+       CMPA  #7
+       BLS   A@
+       DECA
+A@     LDX   #FNTBL
+       LDB   #8
+       MUL
+       LEAX  D,X
+       JMP   LOADST
+
+FLOFLG FCB   0  $FF=FLOW COLORS
+
+Z@     FCB   0,0,0,0,0,0,0,0,0
+PLSPEC LDD   #0
+       STD   Z@
+       STD   Z@+2
+       STD   Z@+4
+       STD   Z@+6
+       STB   Z@+8
+       LDA   FATFLG
+       STA   Z@
+       LDB   #$FF
+       LDA   COLOR
+       CMPA  PATTRN
+       BEQ   L@
+       CLRB
+L@     STB   Z@+5
+       LDA   VCYC
+       COMA
+       STA   Z@+4
+       LDA   VCYC
+       BNE   K@
+       LDA   #'\
+       STA   FLOMRK
+       CLR   FLOFLG
+K@     LDA   CYCFLG
+       STA   Z@+1
+       STA   Z@+6
+       LDA   FATFLG
+       STA   Z@+7
+       STA   Z@+8
+       LDX   #171+3
+       STX   PDX1
+       LDA   <DEFLSO
+       CMPA  #$FF
+       BNE   C@
+       TFR   A,B
+       STD   Z@
+       STD   Z@+2
+       STD   Z@+5
+C@     LDX   #Z@
+       JSR   PULLDN
+       FCC   "\Remap",0
+       FCC   "\Cycle range",0
+       FCC   "\Cycle speed",0
+CYCMRK FCC   "\Cycle colors",0
+FLOMRK FCC   "\Color flow",0
+       FCC   "\Dither pattern",0
+       FCC   "\Copy palette",0
+       FCC   "\Exchange page",0
+       FCC   "\Copy to spare",0
+       FCB   0
+       FDB   REMAP,CYCR,CYCS,CYCC2,A@,DITHER,COPYP,EXGPGE,B@
+       JMP   MENU
+A@     COM   FLOFLG
+       LDX   #FLOMRK
+       JSR   TOGCHK
+       JMP   MENU
+B@     LDA   <DEFLSO
+       CMPA  #$FF
+       BNE   D@
+       JSR   ENDLSO
+D@     LDX   <OH1
+       BEQ   E@
+       JSR   GET
+       LDX   #0
+       STX   <OH1
+E@     CLRA
+       JSR   PAGEIN
+       JSR   PUT
+       LDA   #1
+       LDB   #9
+       JSR   PCOPY
+
+       LDX   #TITLE
+       LDU   #TITLE2
+       LDB   #32
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+
+       LDX   #$FFB0
+       LDU   #PPPBUF
+       LDB   #16
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+
+       LDA   CYCLO
+       STA   CYCLO2
+       LDA   CYCHI
+       STA   CYCHI2
+       LDA   CYCSP
+       STA   CYCSP2
+       LDA   VCYC
+       STA   VCYC2
+       LDA   CYCMRK
+       STA   CYCMR2
+       LDA   CYCFLG
+       STA   CYCFL2
+       JMP   MENU
+
+EXGPGE LDA   <DEFLSO
+       CMPA  #$FF
+       BNE   A@
+       JSR   ENDLSO
+A@     LDX   <OH1
+       BEQ   B@
+       JSR   GET
+       LDX   #0
+       STX   <OH1
+B@     CLRA
+       JSR   PAGEIN
+       JSR   PUT
+       LDA   #1
+       LDB   #2
+       JSR   PCOPY
+       LDA   #9
+       LDB   #1
+       JSR   PCOPY
+       LDA   #2
+       LDB   #9
+       JSR   PCOPY
+       LDA   #$FF
+       STA   <FLNAMD
+       LDA   #1
+       LDB   #8
+       JSR   PCOPY
+       JSR   GET
+       LDX   #TITLE
+       LDU   #TITLE2
+       LDB   #32
+       PSHS  B
+G@     LDA   ,X
+       LDB   ,U
+       STA   ,U+
+       STB   ,X+
+       DEC   ,S
+       BNE   G@
+
+       LDX   #CYCPAL
+       LDU   #CYCPA2
+       LDB   #16
+       PSHS  B
+A@     LDA   ,X
+       LDB   ,U
+       STA   ,U+
+       STB   ,X+
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+       LDX   #$FFB0
+       LDU   #PPPBUF
+       LDB   #16
+       PSHS  B
+A@     LDA   ,X
+       LDB   ,U
+       STA   ,U+
+       STB   ,X+
+       DEC   ,S
+       BNE   A@
+       LEAS  2,S
+       LDA   $FFBF
+       STA   $FF9A
+
+       LDA   CYCLO2
+       LDB   CYCHI2
+       PSHS  D
+       LDA   CYCSP2
+       LDB   CYCMR2
+       PSHS  D
+       LDA   VCYC2
+       LDB   CYCFL2
+       PSHS  D
+
+       LDA   VCYC
+       STA   VCYC2
+       LDA   CYCMRK
+       STA   CYCMR2
+       LDA   CYCLO
+       STA   CYCLO2
+       LDA   CYCHI
+       STA   CYCHI2
+       LDA   CYCSP
+       STA   CYCSP2
+       LDA   CYCFLG
+       STA   CYCFL2
+
+       PULS  D
+       STA   VCYC
+       STB   CYCFLG
+       PULS  D
+       STA   CYCSP
+       STB   CYCMRK
+       PULS  D
+       STA   CYCLO
+       STB   CYCHI
+
+       JSR   SHOTIT
+       JMP   MENU
+
+CYCPA2 RMB   16
+CYCFL2 FCB   0
+CYCMR2 FCB   '\
+VCYC2  FCB   0
+CYCLO2 FCB   0
+CYCHI2 FCB   0
+CYCSP2 FCB   10
+
+TITLE2 FCC /Untitled/
+       BSZ   24
+PPPBUF RMB   16
+
+FNTBL  FCC   "LYNCHBRGGRANDLGESANPABLSPRINCETN"
+       FCC   "MONTAUK NEWYORK LANSING "
+       FCC   "NORTHPRTCHICAGO LUEYVILE"
+       FCC   "SYDNEY  DUBLIN  CLEVELNDATLANTA "
+
+Z@     FCB   0,0,0,0,0,0,0
+PLSTYL LDX   #241
+       STX   PDX1
+       LDX   #Z@
+       JSR   PULLDN
+PLNMS  FCC   "_Plain",0
+BLDMS  FCC   "\Bold",0
+ITLMS  FCC   "\Italic",0
+OUTMS  FCC   "\Outline",0
+SHDMS  FCC   "\Shadow",0
+UNDMS  FCC   "\Underline",0
+CSTMS  FCC   "\Cast",0
+       FCB   0
+       FDB   TPLN,TBLD,TITL,TOUT,TSHD,TUND,TCST
+       JMP   MENU
+
+TUND   LDA   #'_
+       LDB   UNDLNE
+       BNE   A@
+       STA   UNDMS
+       COM   UNDLNE
+       BRA   B@
+A@     LDA   #'\
+       STA   UNDMS
+       COM   UNDLNE
+B@     JMP   CPLN
+
+TPLN   LDA   PLNMS
+       CMPA  #'\
+       BEQ   A@
+       LDA   #'\
+       STA   PLNMS
+       JMP   MXXX
+A@     LDA   #'_
+       STA   PLNMS
+       CLR   BOLD
+       CLR   ITALIC
+       CLR   SHADOW
+       CLR   OUTLNE
+       CLR   UNDLNE
+       CLR   CSTSHD
+       LDA   #'\
+       STA   SHDMS
+       STA   OUTMS
+       STA   BLDMS
+       STA   ITLMS
+       STA   UNDMS
+       STA   CSTMS
+       JMP   MXXX
+
+TCST   LDA   #'_
+       LDB   CSTSHD
+       BNE   A@
+       STA   CSTMS
+       COM   CSTSHD
+       LDA   #'\
+       STA   OUTMS
+       STA   SHDMS
+       CLR   SHADOW
+       CLR   OUTLNE
+       BRA   B@
+A@     LDA   #'\
+       STA   CSTMS
+       COM   CSTSHD
+B@     JMP   CPLN
+
+
+TBLD   LDA   #'_
+       LDB   BOLD
+       BEQ   TBON
+       LDA   #'\
+       STA   BLDMS
+       COM   BOLD
+       JMP   CPLN
+TBON   STA   BLDMS
+       COM   BOLD
+       JMP   CPLN
+
+TSHD  
+       TST   CSTSHD
+       LBNE  CPLN
+       LDA   #'_
+       LDB   SHADOW
+       BEQ   TSON
+       LDA   #'\
+       STA   SHDMS
+       COM   SHADOW
+       JMP   CPLN
+TSON   STA   SHDMS
+       COM   SHADOW
+       JMP   CPLN
+
+TOUT   TST   CSTSHD
+       LBNE  CPLN
+       LDA   #'_
+       LDB   OUTLNE
+       BEQ   TOON
+       LDA   #'\
+       STA   OUTMS
+       COM   OUTLNE
+       JMP   CPLN
+TOON   STA   OUTMS
+       COM   OUTLNE
+       JMP   CPLN
+
+TITL   LDA   #'_
+       LDB   ITALIC
+       BEQ   TITON
+       LDA   #'\
+       STA   ITLMS
+       COM   ITALIC
+       JMP   CPLN
+TITON  STA   ITLMS
+       COM   ITALIC
+       JMP   CPLN
+
+CPLN   LDA   #'\
+       STA   PLNMS
+MXXX   TST   TYPING
+       BEQ   A@
+       JSR   UPDMDE
+A@     JMP   MENU
+
+CHKMRK FCB   %11111111
+       FCB   %11111111
+       FCB   %11111100
+       FCB   %11111001
+       FCB   %01110011
+       FCB   %00100111
+       FCB   %10001111
+       FCB   %11011111
+
+*8 DOTS
+MRKWHR FDB   $8000+(137*160)+5
+       FDB   $8000+(144*160)+5
+       FDB   $8000+(152*160)+5
+       FDB   $8000+(162*160)+5
+       FDB   $8000+(172*160)+5
+
+PUTMRK LDX   #10
+       STX   <BH1
+       LDX   #19
+       STX   <BH2
+       LDA   #137
+       STA   <BV1
+       LDA   #184
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+       LDX   #MRKWHR
+       LDA   WIDTH
+       INCA
+       LSLA
+       LDU   A,X
+       LDX   #CHKMRK
+       LDB   #8
+       PSHS  B
+A@     LDA   ,X+
+       JSR   CHR2
+       LEAU  160,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+CERR   CLR   TYPING
+       STB   WPAGE
+       STA   $FFD9
+       STA   $FFDF
+       LDA   #$0C
+       TFR   A,DP
+       LDA   #$44
+       STA   $FF90
+       CLRA
+       JSR   PAGEIN
+       TST   COPERR
+       BEQ   X@
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       CLR   COPERR
+X@     JSR   CLOSE
+       LDS   #$5FF
+       CLRA
+       JSR   PAGEIN
+       JSR   VIEW
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDB   WPAGE
+       BNE   D@
+       JSR   DIALOG
+       FCB   32,13
+       FCC   "Input past EOF",13
+       FCC   "**BAD FILE**",13
+       FCB   32,13,0
+       JMP   Z@
+D@     CMPB  #52
+       BNE   A@
+       JSR   DIALOG
+       FCB   32,13
+       FCC   "File not found",13
+       FCC   "Please insert correct disk",13
+       FCC   "and try again",13
+       FCB   32,13,0
+       JMP   Z@
+A@     CMPB  #40
+       BNE   B@
+       JSR   DIALOG
+       FCB   32,13
+       FCC   "System ERROR",13
+       FCC   "Input/Output Error!",13
+       FCB   32,13,0
+       JMP   Z@
+B@     CMPB  #56
+       BNE   C@
+       JSR   DIALOG
+       FCB   32,13
+       FCC   "System ERROR",13
+       FCC   "Diskette full!",13,32,13,0
+       JMP   Z@
+C@     CMPB  #60
+       BNE   F@
+       JSR   DIALOG
+       FCB   32,13
+       FCC   "System ERROR",13
+       FCC   "Disk is write protected",13,32,13,0
+       JMP   Z@
+F@     JSR   DIALOG
+       FCB   32,13
+       FCC   "System ERROR",13
+       FCC   "Error type unknown!",13
+       FCB   32,13,0
+Z@     CLRA
+       JSR   VIEW
+       CLR   $FF40
+       CLR   $986
+Y@     LDA   $FF00
+       LSRA
+       BCS   Y@
+       BSR   WTBUT
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       JMP   MENU
+
+WTBUT  LDA   $FF00
+       BITA  #1
+       BEQ   WTBUT
+       LDX   #500 BOUNCE DELAY
+A@     DEX
+       BNE   A@
+       LDA   $FF00
+       BITA  #1
+       BEQ   WTBUT
+       RTS
+
+OLDJMP FDB   WTHPNC
+
+SHOTIT LDA   #13
+       STA   <LV1
+       STA   <LV2
+       LDX   #44
+       STX   <LH1
+       LDX   #309
+       STX   <LH2
+       LDA   #4
+       PSHS  A
+A@     CLRB
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       LDB   #15
+       JSR   LINE
+       INC   <LV1
+       INC   <LV2
+       DEC   ,S
+       BNE   A@
+       JSR   LINE
+       LEAS  1,S
+       LDA   #13
+       STA   <LPRTV
+
+       LDX   #TITLE
+       JSR   FLEN
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #176
+       SUBD  ,S
+       STD   <LPRTH
+       SUBD  #4
+       STD   <BH1
+       LDD   #176
+       ADDD  ,S++
+       ADDD  #4
+       STD   <BH2
+       LDA   #13
+       STA   <BV1
+       LDA   #21
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED
+
+       LDX   #TITLE
+       LDB   #32
+A@     LDA   ,X+
+       BEQ   B@
+       JSR   LYNPRT
+       DECB
+       BNE   A@
+B@
+       RTS
+
+C@     FCC   " File  Edit  Modify  Goodies  Special  Font  Style",0
+BTTXT  LDD   #5
+       STD   <LPRTH
+       LDA   #0
+       STA   <LPRTV
+       LDX   #C@
+A@     LDA   ,X+
+       BEQ   B@
+       JSR   LYNPRT
+       BRA   A@
+B@     RTS
+
+
+B@     BSZ   16
+PLMOD  LDA   #255
+       LDX   <OH1
+       BEQ   C@
+       CLRA
+C@     LDX   #B@
+D@     STA   ,X+
+       CMPX  #B@+16
+       BNE   D@
+       LDX   #68
+       STX   PDX1
+       LDX   #B@
+       JSR   PULLDN
+A@     FCC   "Invert",0
+       FCC   "Fill",0
+       FCC   "Thicken",0
+       FCC   "Trace edges",0
+       FCC   "Shadow",0
+       FCC   "Flip Horizontal",0
+       FCC   "Flip Vertical",0
+       FCC   "Remap",0
+       FCC   "Tilt Horizontal",0
+       FCC   "Tilt Vertical",0
+       FCC   "Stretch",0
+       FCC   "Rotate",0
+       FCC   "Bend Horizontal",0
+       FCC   "Bend Vertical",0
+       FCB   0
+       FDB   INVO,FILLO,THICK,TRACE,SHAD,FLIPH,FLIPV,CHGC,TILTH,TILTV
+
+       FDB   STRTCH,ROTATE,BHORZ,BVERT
+       JMP   MENU
+
+CYCC2  JSR   CYCINC
+       JMP   CYCC
+
+COPERR FCB 0
+
+OTTHR  FDB   ENDPRG
+OTTHR2 FDB   0
+ENOT2  FDB   0
+ENDPRG RMB   1
+       END

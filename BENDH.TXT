@@ -1,0 +1,847 @@
+       NAM   BEND
+
+BFLAG1 EQU   DO1
+BFLAG2 EQU   DO2
+
+BENDH  LDA   #1
+       LDB   #7
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+
+       CLRA
+       JSR   [PAGEIN]
+       JSR   DOWN
+       JSR   [PUT]
+       CLRA
+       JSR   [VIEW]
+
+       CLR   <LNEWDT
+       JSR   [DRWARW]
+       LDA   #2
+       STA   <WPAGE
+
+* DEFINITION LOOP
+BENDH1 LDA   $FF00
+       ANDA  #1
+       LBEQ  BENDH3
+
+       JSR   [JOYSTK]
+       JSR   [VALID]
+
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <AY
+       BEQ   BENDH1
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+
+       LDA   <WPAGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+
+       LDD   <JOYX
+       CMPD  <OH2
+       BHS   Z@
+       CMPD  <OH1
+       BLS   A@
+       JMP   BENDH2
+Z@     LDX   #HOOK1
+       STX   ELHK
+       SUBD  <OH2
+       STD   RX
+       LDA   #$FF
+       STA   <BFLAG2
+       BRA   B@
+A@     LDX   #HOOK2
+       STX   ELHK
+       LDD   <OH1
+       SUBD  <JOYX
+       STD   RX
+       CLR   <BFLAG2
+B@     CLRA
+       LDB   <OV2
+       SUBB  <OV1
+       LSRB
+       STD   RY
+       LDD   <OH2
+       STD   X0
+       LDA   <OV1
+       ADDA  RY+1
+       STA   Y0
+
+       LDD   RX
+       CMPD  #2
+       LBLS  BENDH2
+
+       CLR   <BFLAG1
+
+       JSR   ELLPSE
+       LDX   <OH1
+       STX   <LH1
+       LDX   <OH2
+       STX   <LH2
+       LDA   <OV1
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+       LDA   <OV2
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+
+BENDH4 JSR   [DRWARW]
+       LDA   <WPAGE
+       JSR   [VIEW]
+       EORA  #2
+       STA   <WPAGE
+
+       JMP   BENDH1
+
+* SPECIAL CASE: NO BEND!
+BENDH2 LDA   <WPAGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+       LDX   <OH1
+       STX   <BH1
+       LDX   <OH2
+       STX   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       LDA   #$FF
+       STA   <BFLAG1
+
+       JMP   BENDH4
+
+* THE ACTUAL BEND ROUTINE
+BENDH3 JSR   [RPLARW]
+       LDA   #7
+       LDB   #1
+       JSR   [PCOPY]
+       TST   <BFLAG1
+       LBNE  BENDH5
+
+       LDX   #POINTS
+       LDD   #0
+A@     STD   ,X++
+       STD   ,X++
+       CMPX  #POINTS+384
+       BLO   A@
+
+       LDX   #HOOK3
+       STX   ELHK
+
+       LDA   <OYSZE
+       LSRA
+       STA   Y0
+
+       JSR   ELLPSE
+       BSR   HSHIFT
+       JMP   HSHFT2
+
+HSHIFT LDA   <ERCOLR
+       PSHS  A
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   ERLFT
+       ORA   ,S+
+       STA   ER
+
+       LDA   #5
+       JSR   [PAGEIN]
+       LDU   #$8000
+       LDA   ER
+       TFR   A,B
+A@     STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       CMPU  #$8000+32000
+       BLO   A@
+
+       JSR   PAGE6
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   #$2425
+       STX   $FFAC
+       LDX   #$2627
+       STX   $FFAE
+
+* TASK0=PAGE 6
+* TASK1=PAGE 5
+
+* BFLAG2: 0=LEFT  255=RIGHT
+
+       LDX   #$8000
+       LDY   #POINTS
+       CLR   <TEMP2
+A@     LDA   <TEMP2
+       LDB   #2
+       MUL
+       LDD   D,Y  D=# PIXELS
+       TST   <BFLAG2
+       BNE   Y@
+       PSHS  D
+       LDD   RX
+       SUBD  ,S++
+Y@     LSRA   D=# OF PIXELS/MOVE
+       RORB       B=BYTE OFFSET
+       PSHS  X
+       LBCS  F@
+* COPY W/O ROTATE:
+       LEAU  D,X
+       LDB   #TASK0
+       STB   $FF91
+       LDA   ,X+
+       TST   <OXL
+       BMI   B@
+       ANDA  #$0F
+       ORA   ERLFT
+B@     LDB   #TASK1
+       STB   $FF91
+       STA   ,U+
+       LDA   <OXSZE
+       BEQ   D@
+       STA   <TEMP1
+C@     LDB   #TASK0
+       STB   $FF91
+       LDA   ,X+
+       LDB   #TASK1
+       STB   $FF91
+       STA   ,U+
+       DEC   <TEMP1
+       BNE   C@
+D@     LDB   #TASK0
+       STB   $FF91
+       LDA   ,X
+       LDB   <OXR
+       CMPB  #$FF
+       BEQ   E@
+       ANDA  #$F0
+       ORA   <ERCOLR
+E@     LDB   #TASK1
+       STB   $FF91
+       STA   ,U
+       JMP   Z@
+* W/ ROTATE:
+F@     LEAU  D,X
+       LEAU  1,U
+       LDA   <OXSZE
+       INCA
+       STA   <TEMP1
+       LDB   #TASK0
+       STB   $FF91
+       LDA   ,X
+       TST   <OXL
+       BPL   H@
+G@     LSRA
+       LSRA
+       LSRA
+       LSRA
+       ORA   ERLFT
+       LDB   #TASK1
+       STB   $FF91
+       STA   -1,U
+H@     LDA   <TEMP1
+       BEQ   J@
+I@     LDB   #TASK0
+       STB   $FF91
+       LDA   ,X+
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       PSHS  A
+       LDA   ,X
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       ORA   ,S+
+       LDB   #TASK1
+       STB   $FF91
+       STA   ,U+
+       DEC   <TEMP1
+       BNE   I@
+J@     LDB   <OXR
+       CMPB  #$FF
+       BNE   Z@
+       LDB   #TASK0
+       STB   $FF91
+       LDA   ,X
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   <ERCOLR
+       LDB   #TASK1
+       STB   $FF91
+       STA   ,U
+Z@     PULS  X
+       LEAX  160,X
+       INC   <TEMP2
+       LDA   <TEMP2
+       CMPA  <OYSZE
+       LBLS  A@
+
+       LDB   #TASK0
+       STB   $FF91
+
+       LDA   #5
+       LDB   #6
+       JMP   [PCOPY]
+
+HSHFT2 TST   <BFLAG2
+       BNE   A@
+       LDD   <OH1
+       SUBD  RX
+       STD   <OH1
+       BRA   B@
+A@     LDD   <OH2
+       ADDD  RX
+       STD   <OH2
+B@
+
+       LDD   <OH1
+       LSRA
+       RORB
+       PSHS  B
+       LDD   <OH2
+       LSRA
+       RORB
+       SUBB  ,S+
+       DECB
+       STB   <OXSZE
+
+       LDA   <OH2+1
+       ANDA  #1
+       BEQ   A@
+       LDA   #$FF
+       FCB   $8C
+A@     LDA   #$F0
+       STA   <OXR
+       LDA   <OH1+1
+       ANDA  #1
+       BEQ   B@
+       LDA   #$0F
+       FCB   $8C
+B@     LDA   #$FF
+       STA   <OXL
+
+BENDH5 LDA   #7
+       LDB   #1
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JSR   DOWN
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+ERLFT  FCB   0
+ER     FCB   0
+BIT1   FCB   0
+
+*DRAW AN ELLIPSE
+ELLPSE LDX   RY
+       BEQ   ?RTS
+       LDX   RX
+       BEQ   ?RTS
+
+       CLR   Y
+       STX   X
+       STX   <N1
+       STX   <N2
+       LDX   #T11
+       JSR   MUL32 <T11=RX*RX
+
+* <T22=T11*2
+       LDX   <T11
+       STX   <T22
+       LDX   <T11+2
+       STX   <T22+2
+       LSL   <T22+3
+       ROL   <T22+2
+       ROL   <T22+1
+       ROL   <T22
+
+* <T3=T22*2
+       LDX   <T22
+       STX   <T3
+       LDX   <T22+2
+       STX   <T3+2
+       LSL   <T3+3
+       ROL   <T3+2
+       ROL   <T3+1
+       ROL   <T3
+
+* <T4=RY*RY
+       LDX   RY
+       STX   <N1
+       STX   <N2
+       LDX   #T4
+       JSR   MUL32
+
+* <T5=T4*2
+       LDX   <T4
+       STX   <T5
+       LDX   <T4+2
+       STX   <T5+2
+       LSL   <T5+3
+       ROL   <T5+2
+       ROL   <T5+1
+       ROL   <T5
+
+* <T6=T5*2
+       LDX   <T5
+       STX   <T6
+       LDX   <T5+2
+       STX   <T6+2
+       LSL   <T6+3
+       ROL   <T6+2
+       ROL   <T6+1
+       ROL   <T6
+
+* <T7=RX*T5
+       LDX   <T5+2
+       STX   <N1
+       LDX   RX
+       STX   <N2
+       LDX   #T7
+       JSR   MUL32
+
+* <T8=T7*2
+       LDX   <T7
+       STX   <T8
+       LDX   <T7+2
+       STX   <T8+2
+       LSL   <T8+3
+       ROL   <T8+2
+       ROL   <T8+1
+       ROL   <T8
+
+* <T9=0
+       LDX   #0
+       STX   <T9
+       STX   <T9+2
+
+* <D1=T22-T7+T4/2
+       LDX   <T7
+       STX   BS
+       LDX   <T7+2
+       STX   BS+2
+       LDX   #BS
+       JSR   NEG32
+
+       LDY   #T22
+       LDU   #D1
+       JSR   ADD32
+       LDX   <D1
+       STX   BS
+       LDX   <D1+2
+       STX   BS+2
+
+       LDX   <T4
+       STX   AS
+       LDX   <T4+2
+       STX   AS+2
+       LSR   AS
+       ROR   AS+1
+       ROR   AS+2
+       ROR   AS+3
+
+       LDX   #BS
+       LDY   #AS
+       LDU   #D1
+       JSR   ADD32
+
+* <D2=T5-T8+T11/2
+       LDX   <T8
+       STX   BS
+       LDX   <T8+2
+       STX   BS+2
+       LDX   #BS
+       JSR   NEG32
+       LDY   #T5
+       LDU   #D2
+       JSR   ADD32
+       LDX   <D2
+       STX   BS
+       LDX   <D2+2
+       STX   BS+2
+       LDX   <T11
+       STX   AS
+       LDX   <T11+2
+       STX   AS+2
+       LSR   AS
+       ROR   AS+1
+       ROR   AS+2
+       ROR   AS+3
+       LDX   #BS
+       LDY   #AS
+       LDU   #D2
+       JSR   ADD32
+
+* MAIN LOOP - QUICKLY GENERATES
+* (X,Y) POINTS OF THE ELLIPSE
+LN1070 LDA   <D2
+       LBPL  LN1500
+
+       JSR   LN2000
+
+* Y=Y+1
+       INC   Y
+* <T9=T9+T3
+       LDX   #T9
+       LDY   #T3
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <T9
+       LDX   BS+2
+       STX   <T9+2
+
+       LDA   <D1
+       LBPL  A@
+* D1< 0
+*
+* D1=D1+T9+T22
+       LDX   #D1
+       LDY   #T9    <D1+T9
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T22     +T2
+       LDU   #D1    = <D1
+       JSR   ADD32
+* <D2=D2+T9
+       LDX   #D2
+       LDY   #T9
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <D2
+       LDX   BS+2
+       STX   <D2+2
+       JMP   LN1070
+A@
+* ELSE:
+       LDD   X
+       SUBD  #1    X=X-1
+       STD   X
+* <T8=T8-T6
+       LDX   <T6
+       STX   BS
+       LDX   <T6+2
+       STX   BS+2
+       LDX   #BS
+       JSR   NEG32
+       LDY   #T8
+       LDU   #AS
+       JSR   ADD32
+       LDX   AS
+       STX   <T8
+       LDX   AS+2
+       STX   <T8+2
+* <T0=T9-T8
+       LDX   #AS
+       JSR   NEG32
+       LDY   #T9
+       LDU   #T0
+       JSR   ADD32
+* <D1=D1+T0+T22
+       LDX   #D1
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T22
+       LDU   #D1
+       JSR   ADD32
+* <D2=D2+T0+T5
+       LDX   #D2
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T5
+       LDU   #D2
+       JSR   ADD32
+       JMP   LN1070
+
+LN1500 JSR   LN2000
+
+       LDD   X
+       SUBD  #1  X=X-1
+       STD   X
+
+* <T8=T8-T6
+       LDX   <T6
+       STX   AS
+       LDX   <T6+2
+       STX   AS+2
+       LDX   #AS
+       JSR   NEG32
+       LDY   #T8
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <T8
+       LDX   BS+2
+       STX   <T8+2
+
+       LDX   #BS
+       JSR   NEG32
+       LDY   #T5
+       LDU   #T0
+       JSR   ADD32
+
+       LDA   <D2
+       LBPL  A@
+*
+B@     INC   Y   Y=Y+1
+* <T9=T9+T3
+       LDX   #T9
+       LDY   #T3
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <T9
+       LDX   BS+2
+       STX   <T9+2
+* <D2=D2+T0+T9
+       LDX   #D2
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   #BS
+       LDY   #T9
+       LDU   #D2
+       JSR   ADD32
+       BRA   LN1540  SKIP ELSE
+* ELSE <D2=D2+T0
+A@     LDX   #D2
+       LDY   #T0
+       LDU   #BS
+       JSR   ADD32
+       LDX   BS
+       STX   <D2
+       LDX   BS+2
+       STX   <D2+2
+
+LN1540 LDA   X   IF X>=0
+       LBPL  LN1500
+
+       RTS
+
+ELHK   RMB   2 HOOK FOR DRAW
+
+TBL9   FCB   $00,$11,$22,$33
+       FCB   $44,$55,$66,$77
+       FCB   $88,$99,$AA,$BB
+       FCB   $CC,$DD,$EE,$FF
+
+LN2000 LDA   Y0    Y1=Y0+Y
+       ADDA  Y
+       STA   Y1
+
+       LDA   Y0    Y2=Y0-Y
+       SUBA  Y
+       STA   Y2
+
+       JMP   [ELHK]
+
+* GET POINT TABLE
+HOOK3  LDX   #POINTS
+       LDA   Y1
+       LDB   #2
+       MUL
+
+       LDU   X
+       STU   D,X
+
+       LDA   Y2
+       LDB   #2
+       MUL
+       STU   D,X
+       RTS
+
+* SET POINTS (X0+X,Y1)
+*            (X0+X,Y2)
+HOOK1  LDD   <OH1
+       ADDD  X
+       STD   <LH1
+       STD   <LH2
+       LDA   Y1
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+
+       LDA   Y2
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+
+       LDD   <OH2
+       ADDD  X
+       STD   <LH1
+       STD   <LH2
+       CLRB
+       JSR   [LINE]
+
+       LDA   Y1
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]
+
+*SET POINTS (X0-X,Y0+Y)
+*           (X0-X,Y0-Y)
+HOOK2  LDD   <OH1
+       SUBD  X
+       STD   <LH1
+       STD   <LH2
+       LDA   Y1
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+       LDA   Y2
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+
+       LDD   <OH2
+       SUBD  X
+       STD   <LH1
+       STD   <LH2
+       CLRB
+       JSR   [LINE]
+       LDA   Y1
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]
+
+* MAKES ,X NEGATIVE
+NEG32  COM   3,X
+       COM   2,X
+       COM   1,X
+       COM   ,X
+
+       INC   3,X
+       BVC   A@
+       INC   2,X
+       BVC   A@
+       INC   1,X
+       BVC   A@
+       INC   ,X
+A@     RTS
+
+* ADDS ,X + ,Y  = ,U
+ADD32  LDA   3,X
+       ADDA  3,Y
+       STA   3,U
+       LDA   2,X
+       ADCA  2,Y
+       STA   2,U
+       LDA   1,X
+       ADCA  1,Y
+       STA   1,U
+       LDA   ,X
+       ADCA  ,Y
+       STA   ,U
+       RTS
+
+MULZER PULS  X
+       LDD   #0
+       STD   ,X
+       STD   2,X
+       RTS
+
+* MULTIPLIES <N1 * <N2, PUTS
+* RESULT ,X
+* <N1, <N2 ARE 16 BITS
+* ,X 32 BIT RESULT
+MUL32  PSHS  X
+
+       LDX   <N1
+       BEQ   MULZER
+       LDY   <N2
+       BEQ   MULZER
+
+       LDD   #0
+       STD   <P1
+       STD   <P3
+       STY   <M3
+A@     LDA   <P4
+       ADDA  <M4
+       STA   <P4
+       LDA   <P3
+       ADCA  <M3
+       STA   <P3
+       LDA   <P2
+       ADCA  #0
+       STA   <P2
+       LDA   <P1
+       ADCA  #0
+       STA   <P1
+       DEX
+       BNE   A@
+
+       PULS  X
+       LDA   <P1
+       STA   ,X
+       LDA   <P2
+       STA   1,X
+       LDA   <P3
+       STA   2,X
+       LDA   <P4
+       STA   3,X
+
+       RTS
+
+SXA    RMB   2
+SYA    RMB   1
+BXA    RMB   2
+BYA    RMB   1
+
+X      RMB   2
+X0     RMB   2
+X1     RMB   2
+X2     RMB   2
+Y      RMB   1
+Y0     RMB   1
+Y1     RMB   1
+Y2     RMB   1
+RX     RMB   2
+RY     RMB   2
+
+AS     RMB   4
+BS     RMB   4
+
+DOT1   FCB   0
+
+       END

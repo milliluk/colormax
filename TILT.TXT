@@ -1,0 +1,480 @@
+       NAM   TILT
+
+TILTH  CLR   <LNEWDT
+       LDA   #1
+       LDB   #7
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       JSR   DOWN
+       JSR   [PUT]
+       LDA   #2
+       STA   <WPAGE
+       CLRA
+       JSR   [VIEW]
+       CLR   VTILT
+       JSR   [DRWARW]
+
+TILTH1 LDA   $FF00
+       ANDA  #1
+       LBEQ  TILTH5
+
+       JSR   [JOYSTK]
+       JSR   [VALID]
+
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <AY
+       BEQ   TILTH1
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       LDA   <WPAGE
+       EORA  #2
+       STA   <WPAGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+
+       LDX   <JOYX
+       CMPX  <OH1
+       BLO   A@
+       CMPX  <OH2
+       LBHI  B@
+       JMP   TILTH4
+A@     CLR   TILTF  TILT LEFT
+       LDX   <JOYX
+       STX   <LH1
+       LDD   <OH1
+       SUBD  <JOYX
+       PSHS  D
+       LDD   <OH2
+       SUBD  ,S
+       STD   <LH2
+       LDA   <OV1
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE] *TOP
+       LDA   <OV2
+       STA   <LV1
+       STA   <LV2
+       LDX   <OH1
+       STX   <LH1
+       LDX   <OH2
+       STX   <LH2
+       JSR   [LINE] *BOTTOM
+       LDA   <OV1
+       STA   <LV2
+       LDX   <JOYX
+       STX   <LH2
+       JSR   [LINE] *LEFT
+       LDX   <OH2
+       STX   <LH1
+       LDA   <OV2
+       STA   <LV1
+       LDA   <OV1
+       STA   <LV2
+       LDD   <OH2
+       SUBD  ,S++
+       STD   <LH2
+       CLRB
+       JSR   [LINE]
+       JMP   C@
+B@     LDA   #$FF    *RIGHT
+       STA   TILTF
+       LDD   <JOYX
+       STD   <LH2
+       SUBD  <OH2
+       ADDD  <OH1
+       STD   <LH1
+       LDA   <OV1
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE] *TOP
+       LDA   <OV2
+       STA   <LV1
+       STA   <LV2
+       LDX   <OH1
+       STX   <LH1
+       LDX   <OH2
+       STX   <LH2
+       JSR   [LINE] *BOTTOM
+       LDX   <JOYX
+       STX   <LH1
+       LDA   <OV1
+       STA   <LV1
+       JSR   [LINE] *RIGHT
+       LDX   <OH1
+       STX   <LH1
+       LDD   <JOYX
+       SUBD  <OH2
+       ADDD  <OH1
+       STD   <LH2
+       LDA   <OV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+C@     LDA   #$FF
+       STA   VTILT  VALID TILT!
+
+TILTH6 LDA   <WPAGE
+       JSR   [VIEW]
+       JSR   [DRWARW]
+       JMP   TILTH1
+
+TILTH4 CLR   VTILT
+       LDX   <OH1
+       STX   <BH1
+       LDX   <OH2
+       STX   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       JMP   TILTH6
+
+TILTH5 JSR   [RPLARW]
+       TST   VTILT
+       LBEQ  BENDH5
+
+       LDX   #POINTS
+       LDD   #0
+A@     STD   ,X++
+       CMPX  #POINTS+384
+       BLO   A@
+
+       CLR   <LV1
+       LDA   <OYSZE
+       STA   <LV2
+       LDX   #0
+       STX   <LH1
+
+       TST   TILTF
+       BNE   A@
+       LDD   <OH1  LEFT
+       SUBD  <JOYX
+       BRA   B@
+A@     LDD   <JOYX RIGHT
+       SUBD  <OH2
+B@     STD   <LH2
+       STD   RX
+       LDX   #THOOK1
+       STX   LNHK
+       JSR   BILLY
+
+       LDA   TILTF
+       COMA
+       STA   <BFLAG2
+       JSR   HSHIFT
+       COM   <BFLAG2
+       JMP   HSHFT2
+
+TILTH9 LDA   #7
+       LDB   #1
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JSR   DOWN
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+VTILT  FCB   0 $FF-VALID TILT
+TILTF  FCB   0 0=LEFT/DOWN
+*              255=RIGHT/UP
+
+TILTV  CLR   <LNEWDT
+       LDA   #1
+       LDB   #7
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       JSR   DOWN
+       JSR   [PUT]
+       LDA   #2
+       STA   <WPAGE
+       CLRA
+       JSR   [VIEW]
+       CLR   VTILT
+       JSR   [DRWARW]
+
+TILTV1 LDA   $FF00
+       ANDA  #1
+       LBEQ  TILTV5
+
+       JSR   [JOYSTK]
+       JSR   [VALID]
+
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <AY
+       BEQ   TILTV1
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       LDA   <WPAGE
+       EORA  #2
+       STA   <WPAGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+
+       LDA   <JOYY
+       CMPA  <OV1
+       BLO   A@
+       CMPA  <OV2
+       LBHI  B@
+       JMP   TILTV4
+A@     LDA   #$FF   :::*UP
+       STA   TILTF
+       LDX   <OH1
+       STX   <LH1
+       STX   <LH2
+       LDA   <OV1
+       STA   <LV1
+       LDA   <OV2
+       STA   <LV2
+       CLRB
+       JSR   [LINE] *LEFT
+       LDX   <OH2
+       STX   <LH1
+       LDA   <JOYY
+       STA   <LV1
+       JSR   [LINE] *TOP
+       LDX   <OH2
+       STX   <LH1
+       STX   <LH2
+       LDA   <JOYY
+       STA   <LV1
+       LDA   <OV1
+       SUBA  <JOYY
+       PSHS  A
+       LDA   <OV2
+       SUBA  ,S+
+       STA   <LV2
+       JSR   [LINE] *RIGHT
+       LDX   <OH1
+       STX   <LH2
+       LDX   <OH2
+       STX   <LH1
+       LDA   <OV2
+       STA   <LV2
+       JSR   [LINE] *BOTTOM
+       JMP   C@
+B@     CLR   TILTF  :::*DOWN
+       LDX   <OH1
+       STX   <LH1
+       STX   <LH2
+       LDA   <OV1
+       STA   <LV1
+       LDA   <OV2
+       STA   <LV2
+       CLRB
+       JSR   [LINE] *LEFT
+       LDA   <OV2
+       STA   <LV1
+       LDA   <JOYY
+       STA   <LV2
+       LDX   <OH1
+       STX   <LH2
+       LDX   <OH2
+       STX   <LH2
+       JSR   [LINE] *BOTTOM
+       LDX   <OH2
+       STX   <LH1
+       LDA   <JOYY
+       SUBA  <OV2
+       ADDA  <OV1
+       STA   <LV1
+       JSR   [LINE] *RIGHT
+       STA   <LV2
+       LDA   <OV1
+       STA   <LV1
+       LDX   <OH1
+       STX   <LH1
+       LDX   <OH2
+       STX   <LH2
+       JSR   [LINE] *TOP
+C@
+
+       LDA   #$FF
+       STA   VTILT
+TILTV6 LDA   <WPAGE
+       JSR   [VIEW]
+       JSR   [DRWARW]
+       JMP   TILTV1
+
+TILTV4 CLR   VTILT
+       LDX   <OH1
+       STX   <BH1
+       LDX   <OH2
+       STX   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       JMP   TILTV6
+
+TILTV5 JSR   [RPLARW]
+       TST   VTILT
+       LBEQ  TILTH9
+
+       LDX   #POINTS
+       LDD   #0
+A@     STD   ,X++
+       CMPX  #POINTS+384
+       BLO   A@
+
+       LDX   #0
+       STX   <LH1
+       CLR   <LV1
+       LDD   <OH2
+       SUBD  <OH1
+       ADDD  #1
+       STD   <LH2
+       TST   TILTF
+       BNE   A@
+       LDA   <JOYY
+       SUBA  <OV2
+       BRA   B@
+A@     LDA   <OV1
+       SUBA  <JOYY
+B@     STA   <LV2
+       STA   RY+1
+       LDX   #THOOK2
+       STX   LNHK
+
+       JSR   BILLY
+
+       LDA   TILTF
+       STA   <BFLAG2
+       JMP   VSHIFT
+
+* BARDEN LINE ALGORITHM
+* STOLEN FROM RAINBOW, JAN 1987
+
+BILLY  LDX   <LH1
+       STX   XX
+       LDA   <LV1
+       STA   YY
+       LDX   #LIN101
+       LDD   <LH2
+       SUBD  <LH1
+       BHS   A@
+       COMA
+       COMB
+       ADDD  #1
+       LDX   #LIN103
+A@     STD   MD
+       LDY   #LIN102
+       LDA   <LV2
+       SUBA  <LV1
+       BHS   B@
+       NEGA
+       LDY   #LIN104
+B@     STA   ND+1
+       CLR   ND
+       LDD   MD
+       CMPD  ND
+       BHS   C@
+       EXG   X,Y
+       LDU   ND
+       STD   ND
+       STU   MD
+C@     LDD   MD
+       STD   MC
+       LSRA
+       RORB
+       LDA   MD+1
+       ANDA  #1
+       BEQ   D@
+       CMPX  #LIN103
+       BLO   D@
+       DECB
+D@     CLRA
+
+A@     JSR   [LNHK]
+       JSR   ,X
+       ADDD  ND
+       CMPD  MD
+       BLO   B@
+       SUBD  MD
+       JSR   ,Y
+B@     PSHS  D
+       LDD   MC
+       SUBD  #1
+       STD   MC
+       PULS  D
+       BNE   A@
+       RTS
+
+LIN101 PSHS  D
+       LDD   XX
+       ADDD  #1
+       STD   XX
+       PULS  D,PC
+
+LIN102 INC   YY
+       RTS
+
+LIN103 PSHS  D
+       LDD   XX
+       SUBD  #1
+       STD   XX
+       PULS  D,PC
+
+LIN104 DEC   YY
+       RTS
+
+YY     RMB   1
+XX     RMB   2
+MD     RMB   2
+ND     RMB   2
+MC     RMB   2
+LNHK   RMB   2
+
+* TILT LEFT/RIGHT
+THOOK1 PSHS  D,U
+       LDU   #POINTS
+       LDA   YY
+       LDB   #2
+       MUL
+       LEAU  D,U
+       LDD   XX
+       STD   ,U
+       PULS  D,U,PC
+
+* TILT UP/DOWN
+THOOK2 PSHS  D,U
+       LDU   #POINTS
+       LDD   XX
+       LEAU  D,U
+       LDA   YY
+       STA   ,U
+       PULS  D,U,PC
+
+       END

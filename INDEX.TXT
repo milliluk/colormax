@@ -1,0 +1,167 @@
+       NAM    <BUBBLE> SORT
+*DON'T WHINE*
+OPENO  EQU   $C956
+       ORG   $E00
+       LDX   #OUTFL
+       LDY   #$94C
+       LDB   #13
+A@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   A@
+
+       JSR   $A928
+       LDX   #TITLE
+       JSR   PRTMS
+*      JSR   $A176
+       CLRA
+       LDB   #3
+       PSHS  D
+       LDX   #BUFFER
+       PSHS  X
+NXTDSK
+BIGLP  LDD   2,S
+       ADDD  #1
+       STD   2,S
+*      JSR   $A928
+*      LDX   #TIT2
+*      JSR   PRTMS
+*      LDD   2,S
+*      JSR   $BDCC
+*      LDX   #TIT3
+*      JSR   PRTMS
+       LDD   2,S
+       CMPD  #91
+       BNE   A@
+*      JSR   $A928
+       LDX   #SRT
+       JSR   PRTMS
+       JSR   SORT
+*      JSR   $A928
+*      LDX   #DEST
+*      JSR   PRTMS
+*      JSR   $A176
+       LDA   #5
+       STA   $EB
+       JSR   OPENO
+       LDX   #BUFFER
+       TST   ,X
+       BEQ   D@
+C@     LDB   #13
+B@     LDA   ,X+
+       JSR   [$A002]
+       DECB
+       BNE   B@
+       LDA   #13
+       JSR   [$A002]
+       TST   ,X
+       BNE   C@
+D@     JSR   $A42D
+       JMP   $AC76
+A@     LDD   2,S
+       STB   $EB
+
+
+*OK READ IN DIRECTORY*
+
+RDIN   LDA   #2
+       STA   $EA
+       LDX   #$600
+       STX   $EE
+       LDA   #17
+       LDB   #3
+       STD   $EC
+RD2    JSR   [$C004]
+       LDX   #$600
+RD3    TST   ,X
+       BEQ   NXTENT
+       LBMI  NXTDSK
+       LDY   ,S
+       LDB   #11
+A@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   A@
+       LDD   2,S
+       STD   ,Y++
+       CLR   ,Y
+       STY   ,S
+       LEAX  21,X
+       BRA   K@
+NXTENT LEAX  32,X
+K@     CMPX  #$700
+       BNE   RD3
+       INC   $ED
+       BRA   RD2
+
+
+
+
+
+
+
+
+
+
+
+
+*sort starts here*
+SORT   LDX   #BUFFER-13 *BOOT X AT BUFFER
+*(MINUS 13 'CAUSE AUTO-INCREM)
+*(BELOW)
+A@     LEAX  13,X NEXT ENTRY
+       TST   ,X END OF FILE
+       BEQ   B@ YES.  DONE.
+       LEAY  -13,X Y=X-13
+*AGAIN, AUTO INCREM..
+C@     LEAY  13,Y NEXT ENTRY
+       TST   ,Y DONE WITH TABLE?
+       BEQ   A@ YES...
+       JSR   COMPAR COMPARE THE
+       BLS   C@ STRINGS. OK!
+       PSHS  X,Y BAD!  REVERSE
+       LDB   #13 THEM! SWITCH
+       PSHS  B CHARACTERS
+F@     LDA   ,X GET ,X
+       LDB   ,Y GET ,Y
+       STA   ,Y+ MOVE ,X TO ,Y
+       STB   ,X+ MOVE ,Y TO ,X
+       DEC   ,S DONE?
+       BNE   F@ NO
+       PULS  X,Y,B GET SAVED.
+       BRA   C@ MAIN LOOP
+B@     RTS DONE!!
+
+
+*comparE ROUTINE...
+*COMPARES TWO STRINGS*
+COMPAR PSHS  X,Y,B
+       LDB   #11 COMPARE BY 11 CHARS (8 FILENAME, 3 EXT)
+A@     LDA   ,X+
+       CMPA  ,Y+
+       BNE   Z@
+       DECB
+       BNE   A@
+Z@     PULS  X,Y,B,PC
+*sort ends here*
+
+TITLE  FCC   "DISK ORGANIZER V1.0",13
+       FCC   "(C) 1985, 1987 BY GREG MILLER",13,0
+TIT2   FCC   "Ready for disk #",0
+TIT3   FCB   13
+       FCC   "PRESS ANY KEY WHEN READY:",0
+PRTMS  LDA   ,X+
+       BEQ   ?RTS
+       JSR   [$A002]
+       BRA   PRTMS
+HITBRK FCB   13
+       FCC   "If you REALLY want to quit,",13
+       FCC   "hit BREAK again:",0
+DEST   FCB   13
+       FCC   "Insert disk for file write,",13
+       FCC   "and press BREAK:",0
+SRT    FCC   "Alphabetically sorting....",13,0
+OUTFL  FCC   "CATALOG DAT",1,255
+BUFFER EQU   *
+       END
+

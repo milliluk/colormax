@@ -1,0 +1,653 @@
+       NAM   ERIKSTUF
+CLST   FCC   "Untitled",0
+
+* ERIK'S BS ROUTINES THAT DON'T
+* DESERVE A FILE OF THEIR OWN
+
+* CLEAR PAGE
+* THIS CLEARS THE PAGE TO THE
+* CURRENT BACKGROUND <COLOR
+CLEAR  JSR   UPDTE
+       LDA   #1
+       LDB   #8
+       JSR   PCOPY
+
+       LDX   #CLST
+       LDY   #TITLE
+       LDB   #9
+C@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   C@
+
+       CLRA
+       JSR   PAGEIN
+       JSR   SHOTIT
+
+       LDB   <PATTRN
+       PSHS  B
+       LDB   ERCOLR
+       STB   <PATTRN
+       JSR   PTSHIT
+       LDA   #2
+       LDB   #1
+       JSR   PCOPY
+       CLRA
+       JSR   PAGEIN
+       JSR   GET
+       PULS  B
+       STB   <PATTRN
+       JMP   MENU
+
+* OOPS
+OOPS   CLRA
+       JSR   PAGEIN
+
+       LDA   <DEFLSO
+       CMPA  #255
+       BNE   A@
+       JSR   ENDLSO
+A@     LDX   <OH1
+       BEQ   B@
+       JSR   PUTOVL
+B@     TST   FATFLG
+       LBNE  E@
+       JSR   PUT
+C@     LDA   #1
+       LDB   #7
+       JSR   PCOPY
+       LDA   #8
+       LDB   #1
+       JSR   PCOPY
+       LDA   #7
+       LDB   #8
+       JSR   PCOPY
+       CLRA
+       JSR   PAGEIN
+       JSR   GET
+       JMP   MENU
+E@     LDA   #8
+       LDB   #1
+       JSR   PCOPY
+
+       LDA   #2
+       JSR   PAGEIN
+       JSR   GET
+       LDA   #1
+       STA   $FFA3
+       CLRA
+       JSR   PAGEIN
+       JSR   [$6008]
+       JMP   MENU
+
+* TOGCHK
+* THIS ROUTINE WILL TOGGLE THE
+* CHECK MARK POINTED TO AT X
+TOGCHK PSHS  A
+       LDA   ,X
+       CMPA  #'_
+       BNE   A@
+       LDA   #'\
+       FCB   $8C
+A@     LDA   #'_
+       STA   ,X
+       PULS  A,PC
+
+* VALID
+* MAKES THE COORDS IN <JOYX,JOYY
+* INSIDE OF THE WINDOW
+VALID  PSHS  D,X
+       LDA   LNEWDT
+       INCA
+       LDX   #Z@
+       LDB   A,X
+       CLRA
+       PSHS  B
+       PSHS  D
+       LDD   #310
+       SUBD  ,S++
+       STD   X@
+       LDB   #155
+       SUBB  ,S+
+       STB   Y@
+*
+       LDX   <JOYX
+       CMPX  X@
+       BLO   A@
+       LDX   X@
+       STX   <JOYX
+A@     CMPX  #44
+       BHI   B@
+       LDX   #44
+       STX   <JOYX
+B@     LDA   <JOYY
+       CMPA  Y@
+       BLO   C@
+       LDA   Y@
+       STA   <JOYY
+C@     CMPA  #24
+       BHI   D@
+       LDA   #24
+       STA   <JOYY
+D@     PULS  D,X,PC
+X@     FDB   0
+Y@     FCB   0
+Z@     FCB   1,1,2,4,8,16
+
+
+IBOXF  CLR   FILLIT
+       BRA   A@
+IBOX   LDA   #$FF
+       STA   FILLIT
+A@     LDA   WIDTH
+       STA   LNEWDT
+       LDX   <AX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <AY
+       ADDA  #5
+       STA   <JOYY
+       JSR   VALID
+       LDX   <JOYX
+       STX   <BH1
+       LDA   <JOYY
+       STA   <BV1
+
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+
+       CLR   WPAGE
+
+IB1    LDA   WPAGE
+       JSR   VIEW
+       JSR   PAGEIN
+       JSR   DRWARW
+       EORA  #2
+       STA   WPAGE
+       JSR   PAGEIN
+
+DOBOX  LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       TST   WPAGE
+       BNE   B@
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+B@     CLR   LNEWDT
+       LDA   WPAGE
+       EORA  #2
+       JSR   PAGEIN
+       JSR   RPLARW
+       CLRA
+       JSR   VIEW
+       JSR   PAGEIN
+       JSR   RPLARW
+       JMP   MENU
+A@
+
+       JSR   JOYSTK
+       LDX   <JOYX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <JOYY
+       ADDA  #5
+       STA   <JOYY
+       JSR   VALID
+
+       LDX   <JOYX
+       LEAX  -4,X
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       SUBA  #5
+       CMPA  <AY
+       LBEQ  DOBOX
+A@
+
+       LDX   <JOYX
+       CMPX  <BH1
+       LBEQ  DOBOX
+
+       LDA   WPAGE
+       EORA  #2
+       JSR   PAGEIN
+       JSR   RPLARW
+       LDA   WPAGE
+       JSR   PAGEIN
+
+       JSR   GET
+
+       LDX   <JOYX
+       STX   <BH2
+       LEAX  -4,X
+       STX   <AX
+       LDA   <JOYY
+       STA   <BV2
+       SUBA  #5
+       STA   <AY
+
+       LDB   <COLOR
+       TST   FILLIT   FILLED IN?
+       BNE   A@       IF NOT
+       LDX   <BH1
+       LDA   <BV1
+       LDU   <BH2
+       LDB   <BV2
+       PSHS  X,D,U
+       LDB   <PATTRN
+       JSR   FILLED
+       PULS  X,D,U
+       STX   <BH1
+       STA   <BV1
+       STU   <BH2
+       STB   <BV2
+       CLRB
+A@     LDX   <BH1
+       LDA   <BV1
+       PSHS  X,A
+       JSR   BOX
+       PULS  X,A
+       STA   <BV1
+       STX   <BH1
+
+       JMP   IB1
+
+* SET CURSOR BS ROUTINE
+* X=MASK #1   EVEN BYTE
+* U=MASK #2   EVEN BYTE
+* SETS UP ROTATED VERSIONS &
+* POINTERS, THEN
+* JUMPS BACK TO MENU
+
+EGGHED STX   <USESYM
+       STU   <USEOUT
+
+       LDU   #C2BUF
+       STU   <USESY2
+       BSR   ROTEG
+       LDX   <USEOUT
+       LDU   #C4BUF
+       STU   <USEOU2
+       BSR   ROTEG
+       TST   EGGRET
+       BNE   ?RTS
+       JMP   MENU
+
+ROTEG  LDY   #14*4
+       PSHS  U
+A@     LDD   ,X++
+       STD   ,U++
+       LEAY  -1,Y
+       BNE   A@
+       PULS  U
+
+       LDA   #14
+A@     LDB   #4
+B@     LSR   ,U
+       ROR   1,U
+       ROR   2,U
+       ROR   3,U
+       ROR   4,U
+       ROR   5,U
+       ROR   6,U
+       ROR   7,U
+       DECB
+       BNE   B@
+       LEAU  8,U
+       DECA
+       BNE   A@
+       RTS
+
+
+* PENCIL
+PMASK  FDB   0,0,0,0
+       FDB $0000,$000F,$F000,0
+       FDB $0000,$00F0,$0F00,0
+       FDB $0000,$00FF,$F000,0
+       FDB $0000,$0F00,$F000,0
+       FDB $0000,$0F0F,$0000,0
+       FDB $0000,$F00F,$0000,0
+       FDB $0000,$F0F0,$0000,0
+       FDB $000F,$00F0,$0000,0
+       FDB $000F,$FF00,$0000,0
+       FDB $000F,$F000,$0000,0
+       FDB $000F,$0000,$0000,0
+       FDB   0,0,0,0,0,0,0,0
+
+PMASK3 FDB $0000,$000F,$F000,0
+       FDB $0000,$00FF,$FF00,0
+       FDB $0000,$0FFF,$FFF0,0
+       FDB $0000,$0FFF,$FF00,0
+       FDB $0000,$FFFF,$FF00,0
+       FDB $0000,$FFFF,$F000,0
+       FDB $000F,$FFFF,$F000,0
+       FDB $000F,$FFFF,$0000,0
+       FDB $00FF,$FFFF,$0000,0
+       FDB $00FF,$FFF0,$0000,0
+       FDB $00FF,$FF00,$0000,0
+       FDB $00FF,$F000,$0000,0
+       FDB $00FF,$0000,$0000,0
+       FDB $0000,$0000,$0000,0
+
+SPEN   LDX   #PMASK
+       LDU   #PMASK3
+       LDD   #$030B
+       STD   GPNT
+       JMP   EGGHED
+
+
+PENCIL LDX   <AX
+       LEAX  3,X
+       STX   <JOYX
+       LDA   <AY
+       ADDA  #11
+       STA   <JOYY
+       JSR   VALID
+       LDX   <JOYX
+       STX   <LH1
+       STX   <PH1
+       LDA   <JOYY
+       STA   <LV1
+       STA   <PV1
+       JSR   PPOINT
+
+       CMPB  <COLOR
+       BNE   A@
+       LDB   ERCOLR
+       BRA   B@
+A@     LDB   <COLOR
+B@     STB   <PCOLR
+
+       JSR   PSET
+
+PEN1   JSR   DRWARW
+
+PEN2   LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       JSR   RPLARW
+       JMP   MENU
+A@     JSR   JOYSTK
+       LDA   <JOYY
+       ADDA  #11
+       STA   <JOYY
+       LDX   <JOYX
+       LEAX  3,X
+       STX   <JOYX
+
+       JSR   VALID
+       LDX   <JOYX
+       CMPX  <LH1
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <LV1
+       LBEQ  PEN2
+A@
+
+       JSR   RPLARW
+       LDX   <JOYX
+       LDA   <JOYY
+       STX   <LH2
+       STA   <LV2
+       PSHS  X,A
+       LEAX  -3,X
+       STX   <AX
+       SUBA  #11
+       STA   <AY
+       LDB   <PCOLR
+       JSR   LINE
+       PULS  A,X
+       STX   <LH1
+       STA   <LV1
+
+       JMP   PEN1
+
+* PAINT CAN
+PC1 FDB 0,0,0,0
+    FDB $0000,$FFFF,$0000,$0000
+    FDB $000F,$0000,$F000,$0000
+    FDB $000F,$0F00,$0F00,$0000
+    FDB $0000,$F0F0,$F000,$0000
+    FDB $000F,$000F,$0000,$0000
+    FDB $00F0,$0000,$FFF0,$0000
+    FDB $0F00,$0000,$0FFF,$0000
+    FDB $0F00,$0000,$F00F,$F000
+    FDB $00F0,$000F,$000F,$F000
+    FDB $000F,$00F0,$0000,$F000
+    FDB $0000,$FF00,$0000,$0000
+    FDB   0,0,0,0
+    FDB   0,0,0,0
+PC3 FDB $0000,$FFFF,$0000,$0000
+    FDB $000F,$FFFF,$F000,$0000
+    FDB $00FF,$FFFF,$FF00,$0000
+    FDB $00FF,$FFFF,$FFF0,$0000
+    FDB $000F,$FFFF,$FF00,$0000
+    FDB $00FF,$FFFF,$FFF0,$0000
+    FDB $0FFF,$FFFF,$FFFF,$0000
+    FDB $FFFF,$FFFF,$FFFF,$F000
+    FDB $FFFF,$FFFF,$FFFF,$FF00
+    FDB $0FFF,$FFFF,$F0FF,$FF00
+    FDB $00FF,$FFFF,$000F,$FF00
+    FDB $000F,$FFF0,$000F,$FF00
+    FDB $0000,$FF00,$0000,$0000
+    FDB $0000,$0000,$0000,$0000
+
+SETCAN LDX   #PC1
+       LDU   #PC3
+       LDD   #$0C0A
+       STD   GPNT
+       JMP   EGGHED
+
+* ERASER
+A@     FDB $FFFF,$FFFF,0,0
+       FDB $F000,$000F,0,0
+       FDB $F000,$000F,0,0
+       FDB $F000,$000F,0,0
+       FDB $F000,$000F,0,0
+       FDB $F000,$000F,0,0
+       FDB $F000,$000F,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB 0,0,0,0,0,0,0,0
+       FDB 0,0,0,0,0,0,0,0
+       FDB 0,0,0,0,0,0,0,0
+A2     FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB $FFFF,$FFFF,0,0
+       FDB 0,0,0,0,0,0,0,0
+       FDB 0,0,0,0,0,0,0,0
+       FDB 0,0,0,0,0,0,0,0
+SETERS LDX   #A@
+       LDU   #A2
+       LDD   #0
+       STD   GPNT
+       JMP   EGGHED
+
+ERX    FDB   0
+ERY    FCB   0
+ERASER LDA   #3
+       STA   LNEWDT  FOR VALID
+       LDX   <AX
+       STX   <JOYX
+       LDA   <AY
+       STA   <JOYY
+       JSR   VALID
+       LDX   <JOYX
+       STX   ERX
+       LDA   <JOYY
+       STA   ERY
+       LDA   <PATTRN
+       PSHS  A
+       LDA   ERCOLR
+       STA   <PATTRN
+       JSR   PTSHIT
+       PULS  A
+       STA   <PATTRN
+
+A@     JSR   RPLARW
+       JSR   ERASE
+       JSR   DRWARW
+B@     LDA   $FF00
+       ANDA  #1
+       BEQ   Q@
+       CLR   LNEWDT
+       JSR   RPLARW
+       JMP   MENU
+Q@     JSR   JOYSTK
+       JSR   VALID
+       LDX   <JOYX
+       CMPX  ERX
+       BNE   C@
+       LDA   <JOYY
+       CMPA  ERY
+       BEQ   B@
+C@     LDX   <JOYX
+       STX   <AX
+       STX   ERX
+       LDA   <JOYY
+       STA   <AY
+       STA   ERY
+       JMP   A@
+
+ERM1   FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+       FDB   $FFFF,$FFFF,0
+
+ERM2   FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+       FDB   $0FFF,$FFFF,$F000
+
+* ERASE THE POINT
+* ERX, ERY
+ERASE  LDX   #$8000
+       LDD   ERX
+       LSRA
+       RORB
+       ABX
+       LDA   ERY
+       LDB   #160
+       MUL
+       LEAX  D,X
+       TFR   X,U
+
+       LDX   #ERM1
+       LDA   ERX+1
+       ANDA  #1
+       BEQ   A@
+       LDX   #ERM2
+A@
+
+       LDA   #8
+       PSHS  A
+A@     LDA   #6
+       PSHS  A
+B@     LDA   #2
+       JSR   PAGEIN
+       LDA   ,X+
+       TFR   A,B
+       COMB
+       ANDA  ,U
+       PSHS  A
+       CLRA
+       JSR   PAGEIN
+       ANDB  ,U
+       ORB   ,S+
+       STB   ,U+
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       LEAU  154,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+
+* This routine fills the shit
+* page with a color mask or
+* pattern - used in painting,
+* and brushes, etc.
+PTSHIT
+
+       LDA   #2
+       JSR   PAGEIN
+
+       LDA   PATTRN
+       CMPA  #16
+       BLO   PT1
+* PATTERN FILL
+
+       SUBA  #16
+       LDB   #32
+       MUL
+       ADDD  #PATS
+       TFR   D,Y
+       LEAY  32,Y
+       PSHS  Y
+       LEAY  -32,Y
+
+       LDU   #$8000
+A@     LDA   #20
+       PSHS  A
+       LDD   ,Y++
+       LDX   ,Y++
+B@     STD   ,U
+       STX   2,U
+       STD   4,U
+       STX   6,U
+       LEAU  8,U
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       CMPY  ,S
+       BNE   A@
+       LEAY  -32,Y
+       CMPU  #$8000+160*200
+       BLO   A@
+       LEAS  2,S
+
+PT11   CLRA
+       JMP   PAGEIN
+
+PT1    PSHS  A
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       STS   STAK99
+       TFR   A,B
+       TFR   D,X
+       TFR   X,Y
+       TFR   Y,S
+       LDU   #$8000+200*160
+A@     PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       PSHU  D,X,Y,S
+       CMPU  #$8000
+       BHI   A@
+       LDS   STAK99
+       BRA   PT11
+
+       END

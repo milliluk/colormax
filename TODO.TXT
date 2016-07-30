@@ -1,0 +1,25 @@
+*
+* List of things to do:  10/1
+*
+
+Check for compression oversize
+Paint -- getting in small areas
+F1 = cycle on/off
+F2 = normalize palettes 0 & 15
+load/save GIF
+typesetter & cursor
+*******fonts
+line width-free hand draw after
+  using the lasso
+secret messages-do yours and
+  then send to me so I can add
+  mine.  Take palettes 0-7
+cursor click on "special"- move
+  it over 5 pix
+check error dialog boxes
+save as... break at title=cancel
+           enter at name=save
+shit page snapper for docs
+
+
+      END END END END END

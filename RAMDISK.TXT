@@ -1,0 +1,118 @@
+       NAM   RAMDISK
+
+       ORG   $D800
+
+INIT   JSR   $A928
+       JSR   PRINT
+       FCC   /RAMDISK FOR 1.0 DISK ROM/,13
+       FCC   /(C) 1987 BY ERIK GAVRILUK/,13
+       FCC   /TYPE 'EXEC' TO INITIALIZE THEM/,13,13,0
+
+       LDA   #$7E
+       STA   $D66C
+       LDX   #GO
+       STX   $D66D
+       LDX   #BLAH
+       STX   157
+       RTS
+
+BLAH   LDA   #1
+       STA   <$EB
+       LDA   #3
+       STA   <$EA
+       LDX   #$600
+       STX   <$EE
+       LDD   #$FFFF
+A@     STD   ,X++
+       CMPX  #$700
+       BLO   A@
+
+       BSR   BLK17
+       CLR   <$EB
+       RTS
+
+BLK17  LDD   #17*256+1
+       STD   <$EC
+A@     JSR   [$C004]
+       INC   <$ED
+       LDA   <$ED
+       CMPA  #19
+       BNE   A@
+       RTS
+
+PRINT  PULS  X
+A@     LDA   ,X+
+       BEQ   B@
+       JSR   [$A002]
+       BRA   A@
+B@     TFR   X,PC
+
+GO     PSHS  A
+       LDA   <$EB
+       CMPA  #1
+       BEQ   GO2
+Z@     PULS  A
+
+       FCB   $34,$76,$86,$05
+       JMP   $D670
+
+GO2    PULS  A
+       PSHS  D,X,Y,U
+       ORCC  #$50
+
+       LDY   $FFA4
+
+* CALCULATE BLOCK
+
+       CLRA
+
+       LDX   #0
+       LDB   <$EC
+       BEQ   C@
+A@     LEAX  18*256,X
+       CMPX  #8192
+       BLO   B@
+       LEAX  -8192,X
+       INCA
+B@     DECB
+       BNE   A@
+C@     STA   $FFA4
+       INCA
+       STA   $FFA5
+
+       LDA   <$ED
+       DECA
+       CLRB
+       LEAX  D,X
+       LEAX  $8000,X
+
+       LDU   <$EE
+*X=POINTER TO THAT SECTOR
+*U=DSKCON POINTER
+
+       LDA   <$EA
+       CMPA  #2
+       BEQ   A@
+       EXG   X,U
+A@
+
+       LDA   #32
+       PSHS  A
+A@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       DEC   ,S
+       BNE   A@
+
+       LEAS  1,S
+       STY   $FFA4
+
+DONE   ANDCC #$AF
+       PULS  D,X,Y,U,PC
+
+       END   $D800

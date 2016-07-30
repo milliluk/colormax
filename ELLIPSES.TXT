@@ -1,0 +1,175 @@
+       NAM   ELLIPSES
+
+* DRAW ELLIPSES ON THE SCREEN
+
+STX    FDB   0
+
+RR1    LDA   #$FF
+       STA   <RRFLG
+       CLR   <FILFLG
+       BRA   A@
+RR2    LDA   #$FF
+       STA   <RRFLG
+       STA   <FILFLG
+       BRA   A@
+ELL2   CLR   <RRFLG
+       LDA   #$FF
+       STA   <FILFLG
+       BRA   A@
+ELL1   CLR   <RRFLG
+       CLR   <FILFLG
+A@     LDA   <WIDTH
+       STA   <LNEWDT
+       LDX   <AX
+       STX   STX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <AY
+       ADDA  #5
+       STA   <JOYY
+       JSR   [VALID]
+       LDX   <JOYX
+       STX   <BH1
+       LDA   <JOYY
+       STA   <BV1
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+
+       CLR   <WPAGE
+
+EL1    LDA   <WIDTH
+       STA   <LNEWDT
+       LDA   <WPAGE
+       JSR   [VIEW]
+       JSR   [PAGEIN]
+       JSR   [DRWARW]
+       EORA  #2
+       STA   <WPAGE
+       JSR   [PAGEIN]
+
+DOEL   LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       TST   <WPAGE
+       BNE   B@
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+B@     CLR   <LNEWDT
+       LDA   <WPAGE
+       EORA  #2
+       JSR   [PAGEIN]
+       JSR   [RPLARW]
+       CLRA
+       JSR   [VIEW]
+       JSR   [PAGEIN]
+       JSR   [RPLARW]
+       JMP   [MENU]
+A@
+
+       JSR   [JOYSTK]
+       LDX   <JOYX
+       LEAX  4,X
+       STX   <JOYX
+       LDA   <JOYY
+       ADDA  #5
+       STA   <JOYY
+       JSR   [VALID]
+
+       LDX   <JOYX
+       LEAX  -4,X
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       SUBA  #5
+       CMPA  <AY
+       LBEQ  DOEL
+A@
+
+       LDA   <WPAGE
+       EORA  #2
+       JSR   [PAGEIN]
+       JSR   [RPLARW]
+       LDA   <WPAGE
+       JSR   [PAGEIN]
+
+       JSR   [GET]
+
+       LDX   <JOYX
+       STX   <BH2
+       LEAX  -4,X
+       STX   <AX
+       LDA   <JOYY
+       STA   <BV2
+       SUBA  #5
+       STA   <AY
+
+* SORT COORDS
+* BH1<BH2
+* BV1<BV2
+
+       LDU   <BH1
+       LDX   <BH2
+       CMPX  <BH1
+       BHS   A@
+       EXG   X,U
+A@     STX   ELH2
+       STU   ELH1
+
+
+       LDA   <BV1
+       LDB   <BV2
+       CMPB  <BV1
+       BHS   A@
+       EXG   A,B
+A@     STB   ELV2
+       STA   ELV1
+
+
+       LDD   ELH2
+       SUBD  ELH1
+       LSRA
+       RORB
+       STD   RX
+       ADDD  ELH1
+       STD   X0
+
+       LDB   ELV2
+       SUBB  ELV1
+       LSRB
+       CLRA
+       STD   RY
+       ADDB  ELV1
+       STB   Y0
+
+       LDX   ELH1
+       STX   SXA
+       LDX   ELH2
+       STX   BXA
+       LDA   ELV1
+       STA   SYA
+       LDA   ELV2
+       STA   BYA
+       TST   RRFLG
+       BEQ   A@
+       LDX   RX
+       LEAX  3,X  5?
+       STX   RX
+       LDX   RY
+       LEAX  3,X
+       STX   RY
+A@
+
+       TST   <FILFLG
+       BEQ   A@
+       LDX   #ELHK5
+       BRA   B@
+A@     LDX   #ELHK4
+B@     STX   ELHK
+       JSR   ELLPSE
+
+       JMP   EL1
+
+       END

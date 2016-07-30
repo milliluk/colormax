@@ -1,0 +1,45 @@
+       NAM   CURSORS
+
+* CURSORS THAT WE HAD TO
+* MOVE INTO THE MAIN PGM,
+* AS WELL AS SOME NEW ONES
+
+BMASK  RMB   9*16
+BMASK2 RMB   9*16
+ZEROES BSZ   9*16
+
+SPCAN  FDB   $0000,$000F
+       FDB   $0000,$0000
+       FDB   $0000,$0000
+       FDB   $000F,$0000
+       FDB   $00F0,$0000
+       FDB   $F000,$0000
+       FDB   $0000,$0F00
+       FDB   $0000,$0000
+       FDB   $0000,$0000
+       FDB   $00F0,$00F0
+       FDB   $F000,$00F0
+       FDB   $0000,$0000
+       FDB   $000F,$0000
+       FDB   $0F00,$F000
+       FDB   $0000,$000F
+       FDB   $0000,$000F
+       FDB   $0000,$0F00
+       FDB   $0F00,$0000
+       FDB   $F00F,$0000
+       FDB   $0000,$F000
+       FDB   $0000,$00F0
+       FDB   $00F0,$00F0
+       FDB   $0000,$F000
+       FDB   $0000,$0000
+       FDB   $0F00,$000F
+       FDB   $00F0,$0000
+       FDB   $0000,$0000
+       FDB   $0000,$0F00
+       FDB   $0000,$F000
+       FDB   $0000,$0000
+       FDB   $0000,$0000
+       FDB   $F000,$0000
+EPOL
+
+       END

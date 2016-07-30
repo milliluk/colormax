@@ -1,0 +1,250 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Text Include="..\DEFS.TXT">
+      <Filter>_common</Filter>
+    </Text>
+    <Text Include="..\LOWDEFS.TXT">
+      <Filter>_common</Filter>
+    </Text>
+    <Text Include="..\OVERLAYS.TXT">
+      <Filter>deluxe7.bin</Filter>
+    </Text>
+    <Text Include="..\BRUSH.TXT">
+      <Filter>deluxe1.bin</Filter>
+    </Text>
+    <Text Include="..\SETBRS.TXT">
+      <Filter>deluxe1.bin</Filter>
+    </Text>
+    <Text Include="..\EDITOR.TXT">
+      <Filter>deluxe1.bin</Filter>
+    </Text>
+    <Text Include="..\BRUSHES.TXT">
+      <Filter>deluxe1.bin</Filter>
+    </Text>
+    <Text Include="..\FATBITS.TXT">
+      <Filter>deluxe2.bin</Filter>
+    </Text>
+    <Text Include="..\RAMDISK.TXT">
+      <Filter>utilities</Filter>
+    </Text>
+    <Text Include="..\CGP220.TXT">
+      <Filter>printer drivers</Filter>
+    </Text>
+    <Text Include="..\ANIMTOOL.TXT">
+      <Filter>utilities</Filter>
+    </Text>
+    <Text Include="..\LOAD.TXT">
+      <Filter>deluxe4.bin</Filter>
+    </Text>
+    <Text Include="..\SETPAL.TXT">
+      <Filter>deluxe5.bin</Filter>
+    </Text>
+    <Text Include="..\CYCLE.TXT">
+      <Filter>deluxe5.bin</Filter>
+    </Text>
+    <Text Include="..\BENDH.TXT">
+      <Filter>deluxe7.bin</Filter>
+    </Text>
+    <Text Include="..\BENDV.TXT">
+      <Filter>deluxe7.bin</Filter>
+    </Text>
+    <Text Include="..\TILT.TXT">
+      <Filter>deluxe7.bin</Filter>
+    </Text>
+    <Text Include="..\REMAP.TXT">
+      <Filter>deluxe7.bin</Filter>
+    </Text>
+    <Text Include="..\STRETCH.TXT">
+      <Filter>deluxe7.bin</Filter>
+    </Text>
+    <Text Include="..\CACHE.TXT">
+      <Filter>utilities</Filter>
+    </Text>
+    <Text Include="..\ELLIPSE.TXT">
+      <Filter>deluxe3.bin</Filter>
+    </Text>
+    <Text Include="..\ELLIPSES.TXT">
+      <Filter>deluxe3.bin</Filter>
+    </Text>
+    <Text Include="..\INDEX.TXT">
+      <Filter>utilities</Filter>
+    </Text>
+    <Text Include="..\LOAD128.TXT">
+      <Filter>deluxe4.bin</Filter>
+    </Text>
+    <Text Include="..\FILL.TXT">
+      <Filter>deluxe6.bin</Filter>
+    </Text>
+    <Text Include="..\ANGLES.TXT">
+      <Filter>deluxe6.bin</Filter>
+    </Text>
+    <Text Include="..\FS1.TXT">
+      <Filter>deluxe6.bin</Filter>
+    </Text>
+    <Text Include="..\FS2.TXT">
+      <Filter>deluxe6.bin</Filter>
+    </Text>
+    <Text Include="..\ROTATE.TXT">
+      <Filter>deluxe6.bin</Filter>
+    </Text>
+    <Text Include="..\ROT.TXT">
+      <Filter>deluxe6.bin</Filter>
+    </Text>
+    <Text Include="..\ARROW.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\CMAXDEFS.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\CURSORS.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\DEFINE.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\EDITBOX.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\ERIKSTUF.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\FIZZLE.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\HIRES.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\LINES.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\MOVE.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\OUTFNT.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\PRTLYN.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\PULLDOWN.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\RGBCMP.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\SPECIAL.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\GIFSVE.TXT">
+      <Filter>deluxe4.bin</Filter>
+    </Text>
+    <Text Include="..\LDGIF.TXT">
+      <Filter>deluxe4.bin</Filter>
+    </Text>
+    <Text Include="..\ENCODED.TXT">
+      <Filter>deluxe4.bin</Filter>
+    </Text>
+    <Text Include="..\TABLES.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\ICONS.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\CHRST.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\TITLEPGE.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\GREGSTF2.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\GREGSTUF.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\CHROUT2.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\CHROUT.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\WINDOW.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\WINDOW2.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\DISKIO.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\DISKIO2.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\DISKSTUF.TXT">
+      <Filter>deluxe4.bin</Filter>
+    </Text>
+    <Text Include="..\MAIN2.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\MAIN.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+    <Text Include="..\PCOPY.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\PATS.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\PATTERN.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\COLORMAX.TXT">
+      <Filter>colormax.bin</Filter>
+    </Text>
+    <Text Include="..\DELUXE.TXT">
+      <Filter>deluxe.bin</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="colormax.bin">
+      <UniqueIdentifier>{d751c3cb-e0c5-44bc-b814-9ffd4ade9bfc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="_common">
+      <UniqueIdentifier>{28e1249a-f978-4552-b50d-40a5f483fbe7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe7.bin">
+      <UniqueIdentifier>{c1186fdc-6e3a-4fe1-81a4-3fbb976d1325}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe1.bin">
+      <UniqueIdentifier>{bbe97a2c-1703-4ac9-a909-4ef710be0cfc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe2.bin">
+      <UniqueIdentifier>{da946cb9-6eb6-44d0-9e15-7baf6198c65d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="printer drivers">
+      <UniqueIdentifier>{7d7c4a72-75b7-4799-a195-aaa13325b1f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utilities">
+      <UniqueIdentifier>{39811b87-cbbd-4123-9318-177e21eaaa1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe3.bin">
+      <UniqueIdentifier>{320149ef-4ae7-4430-afd7-533b45dc834e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe4.bin">
+      <UniqueIdentifier>{acd919d7-f5ee-43ba-988c-b63cd11bcf62}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe5.bin">
+      <UniqueIdentifier>{fdf48754-bd02-4246-bf55-2f1a49ef50a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe.bin">
+      <UniqueIdentifier>{0e73ed3c-05a3-4b85-957b-d3aa1d9befe2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="deluxe6.bin">
+      <UniqueIdentifier>{e24c4399-c838-47b1-8b0c-062331348572}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Makefile" />
+  </ItemGroup>
+</Project>

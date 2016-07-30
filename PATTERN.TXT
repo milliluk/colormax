@@ -1,0 +1,217 @@
+       NAM   PATTERN
+
+* PATTERN ROUTINES
+* PATTERNS ARE NUMBERED 0-47
+* 0-15 ARE ALWAYS COLORS
+
+* THIS ROUTINE TAKES PATTERN #A
+* AND SHOWS IT IN THE BIG BOX
+SHOPAT PSHS  D,X,U
+       CMPA  #16
+       LBHS  SP2
+
+       STA   COLOR
+       PSHS  A
+       JSR   FGBOX
+       PULS  A
+
+       LDX   #$8000+163*160+24
+* COLOR A=(0-15)
+       LDB   #19
+       PSHS  B
+       PSHS  A
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       TFR   A,B
+A@     STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STA   ,X+
+       LEAX  145,X
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       JMP   SP3
+
+SP2    LDU   #$8000+163*160+24
+       SUBA  #16
+       LDB   #32
+       MUL
+       ADDD  #PATS
+       TFR   D,X
+
+* DO 8 ROWS OF THE PATTERN
+       LDB   #8
+A@     BSR   PROW
+       DECB
+       BNE   A@
+
+       LEAX  -32,X
+       LDB   #8
+A@     BSR   PROW
+       DECB
+       BNE   A@
+
+       LDB   #3
+       LEAX  -32,X
+A@     BSR   PROW
+       DECB
+       BNE   A@
+       JMP   SP3
+
+PROW   PSHS  B
+       LDD   ,X++
+       STD   ,U
+       STD   4,U
+       STD   8,U
+       STD   12,U
+       LDD   ,X++
+       STD   2,U
+       STD   6,U
+       STD   10,U
+       STA   14,U
+       LEAU  160,U
+       PULS  B,PC
+
+SP3    PULS  D,X,U,PC
+
+* THIS ROUTINE DRAWS ALL OF
+* THE PATTERNS AT THE BOTTOM
+* OF THE SCREEN.
+* A=0 FOR PATTERNS 0-15
+*   ELSE PATTERNS 16-31
+
+DOPAT  PSHS  D,X,U
+       LDU   #$8000+163*160+42
+       LDX   #PATS
+       TSTA
+       BEQ   A@
+       LEAX  16*32,X
+A@
+
+* DO COLORS
+       LDA   #$FF
+       PSHS  A
+A@     INC   ,S
+       LDA   ,S
+       CMPA  #16
+       BEQ   Z@
+       PSHS  A
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       LDB   #9
+       PSHS  B
+       TFR   A,B
+B@     STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       LEAU  154,U
+       DEC   ,S
+       BNE   B@
+       LEAU  -9*160,U
+       LEAU  7,U
+       LEAS  1,S
+       BRA   A@
+Z@     LEAS  1,S
+
+* NOW DO THE PAINT PATTERNS
+       LDU   #$8000+173*160+42
+       LDA   #16  # PATS
+       PSHS  A
+A@     LDB   #8
+       PSHS  B
+B@     LDD   ,X++
+       STD   ,U
+       STD   4,U
+       LDD   ,X++
+       STD   2,U
+       LEAU  160,U
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+*
+       PSHS  X
+       LEAX  -32,X
+       LDD   ,X++
+       STD   ,U
+       STD   4,U
+       LDD   ,X++
+       STD   2,U
+       PULS  X
+       LEAU  -160*8,U
+       LEAU  7,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+       PULS  D,X,U,PC
+
+INVBOX LDA   1,X
+       LDB   #160
+       MUL
+       ADDD  #$8000+160
+       TFR   D,Y
+*
+       LDB   ,X
+       CLRA
+       LSRA
+       RORB
+       LEAY  D,Y
+       LDB   #11
+       PSHS  B
+
+       LDA   ,X
+       CMPA  #8
+       BNE   A@
+H@     LDA   ,Y
+       EORA  #%00001111
+       STA   ,Y
+       COM   1,Y
+       COM   2,Y
+       COM   3,Y
+       COM   4,Y
+       COM   5,Y
+       COM   6,Y
+       LDA   7,Y
+       EORA  #%11110000
+       STA   7,Y
+       LEAY  160,Y
+       DEC   ,S
+       BNE   H@
+       PULS  A,PC
+A@     COM   1,Y
+       COM   2,Y
+       COM   3,Y
+       COM   4,Y
+       COM   5,Y
+       COM   6,Y
+       COM   7,Y
+       LEAY  160,Y
+       DEC   ,S
+       BNE   A@
+       PULS  A,PC
+
+
+       END
+
+
+
+
+
+
+
+
+
+
+
+

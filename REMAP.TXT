@@ -1,0 +1,392 @@
+       NAM   REMAP
+
+CLK    FCB   0
+CLK1   FCB   0
+CLK2   FCB   0
+CLK1L  FCB   0
+CLK2L  FCB   0
+
+REMAP  LDX   OH1
+       STX   THEOV
+       LDX   #0
+       STX   OH1
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+
+       LDX   #96
+       STX   <BH1
+       LDX   #256
+       STX   <BH2
+       LDA   #34
+       STA   <BV1
+       LDA   #146
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       LDB   #15
+       JSR   [BOX]
+       CLRB
+       JSR   BUMP
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   [BOX]
+
+* LEFT BOX
+       LDA   #8+34
+       STA   <BV1
+       LDA   #8+34+64+2
+       STA   <BV2
+       LDX   #96+11
+       STX   <BH1
+       LDX   #96+11+65
+       STX   <BH2
+       JSR   [BOX]
+       JSR   PRETTY
+
+*RIGHT BOX
+       LDX   #96+11+64+10+1
+       STX   <BH1
+       LDX   #96+11+64+10+65+2
+       STX   <BH2
+       JSR   [BOX]
+       JSR   PRETTY
+
+* OK & CANCEL BOXES
+       LDX   #16*8
+       STX   <LPRTH
+       LDA   #16*8
+       STA   <LPRTV
+       LDA   #14
+       STA   [CURSRX]
+       LDA   #16
+       STA   [CURSRY]
+       JSR   BSBOX
+       LDX   #KST1
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #136
+       SUBD  ,S++
+       STD   <LPRTH
+       LDX   #KST1
+       JSR   KST3
+
+       LDA   #24
+       STA   [CURSRX]
+       LDX   #KST2
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #216
+       SUBD  ,S++
+       STD   <LPRTH
+       JSR   BSBOX
+       LDX   #KST2
+       JSR   KST3
+
+* DRAW THE INITIAL DATA ON
+* THE SCREEN FROM EDITX POINTER
+* TO THE EDITED DATA.
+
+       CLRA
+       JSR   [VIEW]
+
+       LDX   USESYM
+       LDU   USESY2
+       PSHS  X,U
+       LDX   USEOUT
+       LDU   USEOU2
+       PSHS  X,U
+       LDX   ARROW
+       STX   USESYM
+       LDX   ARR2
+       STX   USESY2
+       LDX   AROUT
+       STX   USEOUT
+       LDX   AROU2
+       STX   USEOU2
+       JSR   [DRWARW]
+
+       CLR   CLK
+
+* MAIN LOOP *
+EDIT2  JSR   [JOYSTK]
+
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <AY
+       BNE   A@
+       LDA   $FF00
+       ANDA  #1
+       BNE   EDIT2
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       JSR   [DRWARW]
+
+       LDA   $FF00
+       ANDA  #1
+       LBNE  EDIT2
+
+       LDX   <AX
+       CMPX  #83
+       LBLO   EDIT9
+       CMPX  #305
+       LBHI   EDIT9
+       LDA   <AY
+       CMPA  #162
+       LBLO   EDIT9
+       CMPA  #172
+       LBHI   EDIT9
+* CLICKED ON A PALETTE
+
+       LDA   CLK
+       CMPA  #2
+       LBEQ  EDIT2
+
+       INC   CLK
+
+       LDD   <AX
+       SUBD  #82
+       LDY   #0
+A@     CMPD  #14
+       BLO   B@
+       LEAY  1,Y
+       SUBD  #14
+       BRA   A@
+B@     TFR   Y,D
+
+       STB   <COLOR
+       STB   <PATTRN
+       TFR   B,A
+       JSR   [SHOPAT]
+       LDA   #2
+       JSR   [PAGEIN]
+       LDA   <COLOR
+       JSR   [SHOPAT]
+       CLRA
+       JSR   [PAGEIN]
+
+       CLRA
+       LDB   #7
+       JSR   [PCOPY]
+       LDA   #7
+       JSR   [VIEW]
+
+       LDA   #8+34+1
+       STA   <BV1
+       LDA   #8+34+64+1
+       STA   <BV2
+
+       LDB   <COLOR
+       LDA   CLK
+       CMPA  #2
+       BEQ   A@
+       LDX   #96+11+1
+       STX   <BH1
+       LDX   #96+11+64
+       STX   <BH2
+       STB   CLK1
+       BRA   B@
+A@     LDX   #96+11+64+10+2
+       STX   <BH1
+       LDX   #96+11+64+10+65+1
+       STX   <BH2
+       STB   CLK2
+B@     JSR   [FILLED]
+
+       CLRA
+       JSR   [VIEW]
+
+A@     LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+
+       JMP   EDIT2
+
+* OK & CANCEL BOX CHECK;
+EDIT9  LDA   <AY
+       CMPA  #16*8-2
+       LBLO  EDIT2
+       CMPA  #16*8+10
+       LBHI  EDIT2
+       LDX   <AX
+       CMPX  #14*8-2
+       LBLO  EDIT2
+       CMPX  #20*8+2
+       LBLO  A@
+       CMPX  #24*8-2
+       LBLO  EDIT2
+       CMPX  #32*8+2
+       BLO   B@
+       JMP   EDIT2
+* CANCEL;
+B@     LDX   THEOV
+       STX   OH1
+       PULS  X,U
+       STX   USEOUT
+       STU   USEOU2
+       PULS  X,U
+       STX   USESYM
+       STU   USESY2
+       LDA   #2
+       JSR   [VIEW]
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+* OK
+A@     LDA   CLK
+       CMPA  #2
+       LBNE  EDIT2
+
+       LDX   THEOV
+       STX   OH1
+       PULS  X,U
+       STX   USEOUT
+       STU   USEOU2
+       PULS  X,U
+       STX   USESYM
+       STU   USESY2
+
+* DO THE ACTUAL REMAP HERE:
+
+       LDA   CLK1
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   CLK1L
+
+       LDA   CLK2
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   CLK2L
+
+       JSR   PAGE6
+
+       LDX   #$8000
+       LDA   <OYSZE
+       STA   <TEMP1
+A@     LDA   <OXSZE
+       ADDA  #2
+       STA   <TEMP2
+       PSHS  X
+B@     LDA   ,X
+       ANDA  #$F0
+       CMPA  CLK1L
+       BNE   C@
+       LDA   ,X
+       ANDA  #$0F
+       ORA   CLK2L
+       STA   ,X
+C@     LDA   ,X+
+       ANDA  #$0F
+       CMPA  CLK1
+       BNE   D@
+       LDA   -1,X
+       ANDA  #$F0
+       ORA   CLK2
+       STA   -1,X
+D@     DEC   <TEMP2
+       BNE   B@
+       PULS  X
+       LEAX  160,X
+       DEC   <TEMP1
+       BNE   A@
+
+       CLRA
+       LDB   #7
+       JSR   [PCOPY]
+       LDA   #7
+       JSR   [VIEW]
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JSR   DOWN
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+* SETUP CURSRX,Y - AND JSR BSBOX
+* IT WILL DRAW A PROPERLY
+* SIZED AND SHADOWED BOX FOR
+* A CANCEL OR OK BOX
+BSBOX  LDA   [CURSRX]
+       LDB   #8
+       MUL
+       SUBD  #6
+       STD   <BH1
+       ADDD  #56
+       STD   <BH2
+       LDA   [CURSRY]
+       LDB   #8
+       MUL
+       SUBB  #2
+       STB   <BV1
+       ADDB  #10
+       STB   <BV2
+       CLRB
+       JSR   [BOX]
+
+PRETTY LDX   BH1
+       LEAX  2,X
+       STX   <LH1
+       LDX   BH2
+       LEAX  1,X
+       STX   <LH2
+       LDA   <BV2
+       INCA
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+       LDA   <BV1
+       INCA
+       INCA
+       STA   <LV1
+       LDX   <BH2
+       INX
+       STX   <LH1
+       STX   <LH2
+       JMP   [LINE]
+
+KST1   FCC   "OK",0
+KST2   FCC   "CANCEL",0
+
+KST3   LDA   ,X+
+       BEQ   ?RTS
+       JSR   [LYNPRT]
+       BRA   KST3
+
+BUMP   LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       INC   <BV2
+       DEC   <BV1
+       RTS
+
+THEOV  FDB   0
+
+       END

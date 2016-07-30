@@ -1,0 +1,70 @@
+       NAM   SPECIAL
+
+* REMAP PAGE
+REMAP  LDX   #$6002
+       BRA   A@
+CYCR   LDX   #$6004
+       BRA   A@
+CYCS   LDX   #$6006
+       BRA   A@
+CYCC   LDX   #$6008
+       BRA   A@
+DITHER LDX   #$600A
+       BRA   A@
+COPYP  LDX   #$600C
+A@     LDA   #4
+       STA   $FFA3
+       JMP   [,X]
+
+CYCFLG FCB   0  $FF-CYCLING ON
+
+* DO CYCLING; CALLED FROM ARROW
+DOCYC1 FCB   0
+DOCYC  TST   VCYC
+       BEQ   ?RTS
+
+       PSHS  X,D
+       INC   DOCYC1
+       LDA   DOCYC1
+       CMPA  CYCSP
+       LBLO  NOCYC
+       CLR   DOCYC1
+
+       LDA   $FF02
+A@     LDA   $FF03
+       BPL   A@
+
+       LDX   #$FFB0
+       LDA   CYCHI
+       DECA
+       CMPA  CYCLO
+       BNE   A@
+       LEAX  A,X
+       LDD   ,X
+       EXG   A,B
+       STD   ,X
+       JMP   NOCYC
+A@     LDA   CYCHI
+       LDB   A,X
+       PSHS  B
+       DECA
+       CMPA  CYCLO
+       BEQ   C@
+B@     LDB   A,X
+       INCA
+       STB   A,X
+       SUBA  #2
+       CMPA  CYCLO
+       BGE   B@
+       INCA
+C@     PULS  B
+       STB   A,X
+
+NOCYC  PULS  X,D,PC
+
+VCYC   FCB   0  $FF-VALID CYC
+CYCSP  FCB   10 SPEED
+CYCLO  FCB   0  LOW PAL #
+CYCHI  FCB   0  HIGH PAL #
+
+       END

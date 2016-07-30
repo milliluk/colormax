@@ -1,0 +1,340 @@
+       NAM   CGP220 DUMP
+       ORG   $400
+
+       STA   65496
+
+       CLRA
+       FCB   $1F,$8B
+
+       ORCC  #$50
+
+
+START  LDX   #319
+       PSHS  X    CURRENT COLUMN
+
+CLMNLP CLR   ,-S ROW 0
+
+       CLR   GPNT1
+       CLR   GPNT2
+
+
+       LDA   #%10000000
+       STA   COL1
+       STA   COL2
+
+
+       LDX   #$600
+A@     CLR   ,X+
+       CMPX  #$600+75*6
+       BLO   A@
+
+
+A@     LDA   ,S
+       LDU   1,S
+       JSR   PPOINT
+       JSR   ADOT
+       LDA   ,S
+       ADDA  #1
+       STA   ,S
+       CMPA  #200
+       BNE   A@
+
+       LDA   #%11111011
+       STA   $FF02
+       LDA   $FF00
+       BITA  #64
+       BNE   Q@
+       LEAS  3,S
+       BRA   RXX1
+Q@
+
+       JSR   PDATA
+
+       LEAS  1,S
+       LDX   ,S
+       DEX
+       BLE   R@
+       STX   ,S
+       BRA   CLMNLP
+R@     LEAS  2,S
+
+       LDA   #13
+       JSR   CHROUT
+
+RXX1
+
+
+       LDA   #$C
+       FCB   $1F,$8B
+       STA   65497
+       RTS
+
+
+
+PDATA  LDX   #$600
+       BSR   PSST
+       LDX   #$600+75*3
+       BSR   PSST
+       LDX   #$600
+       BRA   PSST
+
+PSST   LDA   #27
+       JSR   CHROUT
+       LDA   #67
+       JSR   CHROUT
+       LDA   #75
+       JSR   CHROUT
+
+       PSHS  X
+       LDB   #75
+A@     LDA   ,X
+B@     JSR   CHROUT
+       LEAX  3,X
+       DECB
+       BNE   A@
+
+       LDX   ,S
+       LDB   #75
+A@     LDA   1,X
+B@     JSR   CHROUT
+       LEAX  3,X
+       DECB
+       BNE   A@
+
+       LDX   ,S
+       LDB   #75
+A@     LDA   2,X
+B@     JSR   CHROUT
+       LEAX  3,X
+       DECB
+       BNE   A@
+
+       PULS  X,PC
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*PPOINT*
+*
+*ENTER U=X POSITION
+*      A=Y POSITION
+*
+PPOINT LDB   #160
+       MUL
+       ADDD  #$8000
+       TFR   D,X
+       TFR   U,D
+       LSRA
+       RORB
+       LEAX  D,X
+       COM   $8000
+       TFR   U,D
+       LDA   #%11110000
+       BITB  #1
+       BEQ   Y@
+       LDA   #%00001111
+Y@     ANDA  ,X
+Z@     BITB  #1
+       BNE   O@
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+O@     LDX   #$FFB0
+       LDA   A,X
+       TST   $E00
+       BEQ   K@
+       LDX   #CMPRGB
+       LDA   A,X
+K@     RTS
+
+SETMEM PSHS  D
+       LDD   $FFA4
+       STD   Y@
+       LDD   $FFA6
+       STD   Z@
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STD   $FFA6
+       PULS  D,PC
+REMEM  PSHS  D
+       LDD   Y@
+       STD   $FFA4
+       LDD   Z@
+       STD   $FFA6
+       PULS  D,PC
+Y@     RMB   2
+Z@     RMB   2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*ADOT*
+*
+*ENTER W/ A=COLOR (RGBRGB)
+*
+
+ADOT
+       PSHS  A
+       LSRA
+       LSRA
+       LSRA
+       PSHS  A    MSB RGB
+       LDA   1,S
+       ANDA  #7
+       STA   1,S  LSB RGB
+
+       LDA   ,S
+       CLRB
+       BSR   FDOT
+
+       LDA   1,S
+       CLRB
+       BSR   FDOT
+
+       LDA   ,S
+       CLRB
+       BSR   FDOT
+
+       LDA   1,S
+       LDB   #1
+       BSR   FDOT
+
+       LDA   ,S
+       LDB   #1
+       BSR   FDOT
+
+       LDA   1,S
+       LDB   #1
+       BSR   FDOT
+       PULS  D,PC
+
+
+
+
+FDOT   LDX   #$600
+       LDY   #GPNT1
+       LDU   #COL1
+       TSTB
+       BEQ   S@
+       LEAX  75*3,X
+       LDY   #GPNT2
+       LDU   #COL2
+S@     LDB   ,Y
+       PSHS  A
+       CLRA
+       LEAX  D,X
+       PULS  A
+
+A@     BITA  #4 RED
+       BEQ   B@
+       LDB   ,X
+       ORB   ,U
+       STB   ,X
+B@     BITA  #2 GREEN
+       BEQ   C@
+       LDB   1,X
+       ORB   ,U
+       STB   1,X
+C@     BITA  #1 BLUE
+       BEQ   D@
+       LDB   2,X
+       ORB   ,U
+       STB   2,X
+D@
+
+       LSR   ,U
+       BCC   E@
+       ROR   ,U
+       LDA   ,Y
+       ADDA  #3
+       STA   ,Y
+E@
+
+       RTS
+
+
+
+
+
+
+
+
+
+
+
+
+
+GPNT1  FCB   0
+GPNT2  FCB   0
+COL1   FCB   %10000000
+COL2   FCB   %10000000
+
+
+
+CHROUT PSHS  D
+       LDA   #254
+       STA   >$6F
+       JSR   SETMEM
+       LDA   #76
+       STA   $FF90
+       STA   $FFDE
+       LDA   ,S
+       JSR   [$A002]
+       STA   $FFDF
+       JSR   REMEM
+       PULS  D,PC
+
+
+CMPRGB
+       FCB   0,2,2,6,0,4,33,32,32,45,5,9,13,8,1,0
+       FCB   7,16,18,21,20,34,38,36,37,44,40,42,11,15,10,27
+       FCB   56,23,19,49,48,55,38,39,37,46,47,41,11,25,24,26
+       FCB   63,58,50,51,62,52,53,60,60,46,61,61,57,59,58,63
+
+*CHROUT PSHS  A
+*       LDA   $FF64
+*       LSRA
+*       PULS  A
+*       BCS   CHROUT
+*       STA   $FF66
+*       RTS
+
+       END

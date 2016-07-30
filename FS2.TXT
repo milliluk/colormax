@@ -1,0 +1,808 @@
+       NAM   FS2/TXT
+
+LAS2   LDA   #255
+       STA   THNTHK
+       TST   DEFLSO
+       LBNE  ALDEF
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [PUT]
+       CLR   KCLR
+       LDA   #2
+       JSR   [PAGEIN]
+       LDA   #15
+       JSR   CLS
+       CLRA
+       JSR   [PAGEIN]
+       JSR   SEGDRW
+       JMP   ENTRLS
+
+LASSO  LDA   #255
+       STA   THNTHK
+       TST   DEFLSO
+       LBNE  ALDEF
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [PUT]
+       CLR   KCLR
+       LDA   #2
+       JSR   [PAGEIN]
+       LDA   #15
+       JSR   CLS
+       CLRA
+       JSR   [PAGEIN]
+       JSR   DRWFRE
+ENTRLS LDA   <LNEWDT
+       PSHS  A
+       LDA   FRSL
+       STA   <LNEWDT
+       LDX   FRSX
+       STX   <LH1
+       LDA   FRSY
+       STA   <LV1
+       LDX   OLDX
+       STX   <LH2
+       LDA   OLDY
+       STA   <LV2
+       CLRB
+       JSR   LINE2
+       PULS  A
+       STA   <LNEWDT
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       LDA   #2
+       JSR   [PAGEIN]
+       JSR   FNDLM1
+       LDX   <LMH1
+       CMPX  <LMH2
+       LBHS  GMENU
+       LEAX  -5,X
+       STX   <BH1
+       STX   UH1
+       LDX   <LMH2
+       LEAX  5,X
+       STX   <BH2
+       STX   UH2
+       LDA   <LMV1
+       CMPA  <LMV2
+       LBHS  GMENU
+       SUBA  #5
+       STA   <BV1
+       STA   UV1
+       LDA   <LMV2
+       ADDA  #5
+       STA   <BV2
+       STA   UV2
+       CLRB
+       JSR   [BOX]
+
+
+       LDX   <LMH1
+       LEAX  -3,X
+       STX   PAINTH
+       LDA   <LMV1
+       SUBA  #2
+       STA   PAINTV
+
+       CLR   PNTC
+       CLR   PNTL
+       CLR   PNTR
+       LDA   #%11110000
+       STA   BCKL
+       LDA   #%00001111
+       STA   BCKR
+       LDA   #255
+       STA   BCKG
+       JSR   PNTALG
+
+       LDS   #$6000
+
+       LDA   <ERCOLR
+       STA   BCKR
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   BCKL
+
+*FIND HEIGHT*
+       LDA   <LMV2
+       SUBA  <LMV1
+       INCA
+       PSHS  A
+
+*FIND # OF BYTES ACROSS*
+       LDD   <LMH1
+       LSRA
+       RORB
+       PSHS  D
+       LDD   <LMH2
+       LSRA
+       RORB
+       SUBD  ,S++
+       ADDD  #1
+       PSHS  D
+*D=# OF BYTES ACROSS, BORDER & ALL*
+       LDD   #160
+       SUBD  ,S
+       PSHS  D
+
+       LDA   <LMV1
+       LDB   #160
+       MUL
+       TFR   D,X
+       LDD   <LMH1
+       LSRA
+       RORB
+       ABX
+
+       CLRB
+A@     CMPX  #8192
+       BLO   B@
+       LEAX  -8192,X
+       INCB
+       BRA   A@
+B@     PSHS  B
+       ADDB  #$3C
+       STB   $FFA0
+       INCB
+       STB   $FFA1
+       PULS  B
+       ADDB  #$34
+       STB   $FFA4
+       INCB
+       STB   $FFA5
+       LEAU  $8000,X
+
+*X=SCREEN MEMORY, ITSELF
+*U=MASK #1 (INPUT)
+
+C@     LDD   2,S
+       PSHS  D
+A@     LDA   ,X+
+       TFR   A,B
+       ANDB  #%11110000
+       CMPB  BCKL
+       BNE   G@
+       ANDA  #%00001111
+       FCB   $8C
+G@     ORA   #%11110000
+       TFR   A,B
+       ANDB  #%00001111
+       CMPB  BCKR
+       BNE   H@
+       ANDA  #%11110000
+       FCB   $8C
+H@     ORA   #%00001111
+*0=BACKGROUND, F=FOREGROUND
+       ANDA  ,U
+       STA   ,U+
+       DEC   1,S
+       BNE   A@
+       LEAS  2,S
+       LDD   ,S
+       LEAX  D,X
+       LEAU  D,U
+       CMPX  #8192
+       BLO   Y@
+       INC   $FFA0
+       INC   $FFA1
+       INC   $FFA4
+       INC   $FFA5
+       LEAX  -8192,X
+       LEAU  -8192,U
+Y@     DEC   4,S
+       BNE   C@
+       LEAS  5,S
+       LDX   #$3839
+       STX   $FFA0
+
+       LDA   #2
+       JSR   [PAGEIN]
+       JSR   FNDLM2
+
+       LDA   #160
+       LDB   LMV1
+       CMPB  LMV2
+       LBHS  GMENU
+       MUL
+       TFR   D,X
+       LDD   LMH1
+       CMPD  LMH2
+       LBHS  GMENU
+       LSRA
+       RORB
+       LEAX  D,X
+       STX   STLSX
+       STX   PUTIT
+
+       LDA   LMV2
+       SUBA  LMV1
+       INCA
+       STA   LSLRW
+
+       LDD   LMH1
+       LSRA
+       RORB
+       PSHS  D
+       LDD   LMH2
+       LSRA
+       RORB
+       SUBD  ,S++
+
+       INCB
+       STB   LSWDT
+
+       CLRA
+       LDB   #5
+       JSR   [PCOPY]
+
+       LDA   #2
+       LDB   #7
+       JSR   [PCOPY]
+
+       LDS   #$3FF
+       CLRA
+       JSR   [VIEW]
+       JSR   ERSLSO
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [PUT]
+
+       LDA   #255
+       STA   DEFLSO
+       JSR   DODIV
+
+       JMP   [MENU]
+
+ROTLSO
+       LDD   #$F000
+       STD   $FF9D
+       LDA   CNTA2
+       DECA
+       ANDA  #7
+       STA   CNTAT
+       STA   CNTA2
+       STS   STR
+       LDS   #$6000
+       LDD   PUTIT
+       JSR   DIV8K
+       PSHS  X
+       ADDB  #$3C
+       STB   $FFA0
+       INCB
+       STB   $FFA1
+
+       LDD   STLSX
+       JSR   DIV8K
+       TFR   B,A
+       ADDB  #$24
+       STB   $FFA4
+       INCB
+       STB   $FFA5
+       ADDA  #$1C
+       STA   $FFA6
+       INCA
+       STA   $FFA7
+       LEAY  $C000,X
+       LEAX  $8000,X
+       PULS  U
+
+
+
+
+* 0000=<TO> LOCATION   * U
+* 8000=<FROM> LOCATION * X
+* C000=<MASK> LOCATION * Y
+
+       LDA   LSLRW
+       PSHS  A
+A@     PSHS  X,Y,U
+       LDB   LSWDT
+       PSHS  B
+       DEC   CNTAT
+       BGT   T@
+       LDA   #7
+       STA   CNTAT
+B@     LDA   ,X+
+       COMA
+       ANDA  ,Y
+       LDB   ,Y+
+       COMB
+       ANDB  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U+
+       DEC   ,S
+       BNE   B@
+       BRA   G@
+T@     LDA   ,X+
+       ANDA  ,Y
+       LDB   ,Y+
+       COMB
+       ANDB  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U+
+       DEC   ,S
+       BNE   T@
+G@     PULS  X,Y,U,A
+       LEAX  160,X
+       LEAY  160,Y
+       LEAU  160,U
+       CMPX  #$A000
+       BLO   I@
+       INC   $FFA4
+       INC   $FFA5
+       INC   $FFA6
+       INC   $FFA7
+       LEAX  -8192,X
+       LEAY  -8192,Y
+I@     CMPU  #$2000
+       BLO   J@
+       INC   $FFA0
+       INC   $FFA1
+       LEAU  -8192,U
+J@     DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+       LDX   #$3839
+       STX   $FFA0
+       LDS   STR
+       RTS
+
+STR    RMB   2
+
+STRX   RMB   1
+
+CNTAT  FCB   0
+CNTA2  FCB   0
+
+
+
+DIV8K  LDY   #0
+A@     CMPD  #8192
+       BLO   B@
+       LEAY  1,Y
+       SUBD  #8192
+       BRA   A@
+B@     TFR   D,X
+       TFR   Y,D
+       RTS
+THEMSK RMB   1
+STLSX  RMB   2
+LSLRW  RMB   1
+LSWDT  RMB   1
+PUTIT  RMB   2
+
+ERSLSO
+       LDD   PUTIT
+       JSR   DIV8K
+       ADDB  #$3C
+       STB   $FFA4
+       INCB
+       STB   $FFA5
+       TFR   X,U
+       LDD   STLSX
+       JSR   DIV8K
+       ADDB  #$1C
+       STB   $FFA6
+       INCB
+       STB   $FFA7
+       LEAU  $8000,U
+       LEAX  $C000,X
+*U=TO, X=FROM*
+
+       LDA   <ERCOLR
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   <ERCOLR
+       PSHS  A
+
+       LDA   LSLRW
+       PSHS  A
+
+A@     PSHS  X,U
+       LDB   LSWDT
+       PSHS  B
+B@     LDA   ,X+
+       TFR   A,B
+       ANDB  6,S
+       COMA
+       ANDA  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U+
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       PULS  X,U
+       LEAX  160,X
+       LEAU  160,U
+J@     CMPX  #$E000
+       BLO   K@
+       LEAX  -8192,X
+       INC   $FFA4
+       INC   $FFA5
+K@     CMPU  #$A000
+       BLO   L@
+       LEAU  -8192,U
+       INC   $FFA6
+       INC   $FFA7
+L@     DEC   ,S
+       BNE   A@
+       LEAS  2,S
+       RTS
+
+
+*PUTLSO*
+*This's the actual "drop the
+*lasso object where it's damned
+*well supposed to be" routine
+*Enter=PUTIT, PUTPGE
+*I'd best make MONEY off of
+*this, Erik.
+*LOTS of money.
+*Or, come NJ, you'll pay.
+PUTLSO
+       STS   STR
+       LDS   #$6000
+       LDD   STLSX
+       JSR   DIV8K
+       TFR   B,A
+       ADDB  #$24
+       STB   $FFA0
+       INCB
+       STB   $FFA1
+       ADDA  #$1C
+       STA   $FFA6
+       INCA
+       STA   $FFA7
+       PSHS  X
+       LDD   PUTIT
+       JSR   DIV8K
+       TST   PUTPGE
+       BNE   H@
+       ADDB  #$3C
+       FCB   $8C
+H@     ADDB  #$34
+       STB   $FFA4
+       INCB
+       STB   $FFA5
+       TFR   X,U
+       PULS  X
+       LEAU  32768,U
+       LEAY  $C000,X
+*Y=MASK @ C000
+*U=TO @ 8000
+*X=FROM (DATA) @ 0000
+
+
+       LDA   LSLRW
+       PSHS  A
+A@     PSHS  X,Y,U
+       LDA   LSWDT
+       PSHS  A
+B@     LDA   ,Y+
+       TFR   A,B
+       ANDA  ,X+
+       COMB
+       ANDB  ,U
+       PSHS  A
+       ORB   ,S+
+       STB   ,U+
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       PULS  X,Y,U
+       LEAX  160,X
+       LEAY  160,Y
+       LEAU  160,U
+       CMPU  #$A000
+       BLO   G@
+       LEAU  -8192,U
+       INC   $FFA4
+       INC   $FFA5
+G@     CMPX  #$2000
+       BLO   H@
+       LEAX  -8192,X
+       LEAY  -8192,Y
+       INC   $FFA0
+       INC   $FFA1
+       INC   $FFA6
+       INC   $FFA7
+H@     DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       LDX   #$3839
+       STX   $FFA0
+       LDS   STR
+       RTS
+
+*ISINL*
+*WILL TAKE THE CURRENT ARROW
+*POSITION, AND TELL IF
+*IT'S WITHIN THE LASSO
+*OR NOT.
+*EXIT: A=0 NOT IN
+*      A=FF, IN THE LASSO AREA.
+INLSO
+ISINL  PSHS  X,B,Y,U
+       LDA   #160
+       LDB   <AY
+       MUL
+       TFR   D,X
+       LDD   <AX
+       LSRA
+       RORB
+       LEAX  D,X
+
+
+       LDD   STLSX
+       SUBD  PUTIT
+       LEAX  D,X
+       LEAX  $8000,X
+
+       LDU   $FFA4
+       PSHS  U
+       LDU   $FFA6
+       PSHS  U
+       LDU   #$1C1D
+       STU   $FFA4
+       LDU   #$1E1F
+       STU   $FFA6
+       LDA   ,X
+       PULS  U
+       STU   $FFA6
+       PULS  U
+       STU   $FFA4
+       TSTA
+       BEQ   Z@
+       LDD   PTHRZ
+       SUBD  LMH1
+       PSHS  D
+       LDA   PTVRT
+       SUBA  LMV1
+       PSHS  A
+       LDD   UH1
+       ADDD  1,S
+       STD   UH1A
+       LDD   UH2
+       ADDD  1,S
+       STD   UH2A
+       LDA   UV1
+       ADDA  ,S
+       STA   UV1A
+       LDA   UV2
+       ADDA  ,S
+       STA   UV2A
+       LEAS  3,S
+       CLRA
+       LDX   <AX
+       CMPX  UH1A
+       BLO   Z@
+       CMPX  UH2A
+       BHI   Z@
+       LDB   <AY
+       CMPB  UV1A
+       BLO   Z@
+       CMPB  UV2A
+       BHI   Z@
+       LDA   #255
+Z@
+       PULS  X,B,Y,U,PC
+
+ALDEF  LDD   <LMH2
+       SUBD  <LMH1
+       ADDD  #1
+       PSHS  D
+       LDD   #310
+       SUBD  ,S++
+       STD   <LMX
+       LDA   <LMV2
+       SUBA  <LMV1
+       INCA
+       PSHS  A
+       LDA   #155
+       SUBA  ,S++
+       STA   <LMY
+       JSR   INLSO
+       TSTA
+       LBEQ  ENDLSO
+       LDA   $FF00
+       BITA  #1
+       BEQ   H@
+       JMP   [MENU]
+H@     JSR   [JOYSTK]
+       JSR   DODIV
+       LDA   <JOYY
+       SUBA  PTVRT
+       STA   XV
+       LDD   <JOYX
+       SUBD  PTHRZ
+       STD   XH
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+G@     LDA   $FF00
+       LSRA
+       LBCS  K@
+*LASSO MOVE LOOP*
+       JSR   [JOYSTK]
+       CLRA
+       LDB   <JOYY
+       SUBD  XV-1
+       BMI   P@
+       TFR   B,A
+       CMPA  #24
+       BHS   S@
+P@     LDA   #24
+S@     CMPA  <LMY
+       BLS   U@
+       LDA   <LMY
+U@     LDB   #160
+       MUL
+       TFR   D,X
+       LDD   <JOYX
+       SUBD  XH
+       CMPD  #44
+       BGE   T@
+       LDD   #44
+T@     CMPD  <LMX
+       BLE   V@
+       LDD   <LMX
+V@     LSRA
+       RORB
+       LEAX  D,X
+       STX   PUTIT
+       LDX   #$3C3D
+       LDU   #$3E3F
+       COM   PUTPGE
+       BEQ   A@
+       LDX   #$3435
+       LDU   #$3637
+A@     STX   $FFA4
+       STU   $FFA6
+       PSHS  X,U
+       JSR   [GET]
+       JSR   DODIV
+       JSR   PUTLSO
+       PULS  X,U
+       LDA   #127
+       STA   $FF02
+       LDA   $FF00
+       BITA  #64
+       BNE   F@
+       STX   $FFA4
+       STU   $FFA6
+       JSR   [PUT]
+F@     CLRA
+       TST   PUTPGE
+       BEQ   Y@
+       LDA   #2
+Y@     JSR   [VIEW]
+       JMP   G@
+K@     CLR   PUTPGE
+       LDX   #$3C3D
+       LDU   #$3E3F
+       STX   $FFA4
+       STU   $FFA6
+       JSR   [GET]
+       JSR   DODIV
+       JSR   PUTLSO
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+DODIV  LDD   PUTIT
+       LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+*DIV BY 32*
+*NOW, DIV BY 5*
+       LDY   #0
+A@     CMPD  #5
+       BLO   B@
+       SUBD  #5
+       LEAY  1,Y
+       BRA   A@
+B@     TFR   Y,D
+       STB   PTVRT
+       LDA   #160
+       MUL
+       PSHS  D
+       LDD   PUTIT
+       SUBD  ,S++
+       LSLB
+       ROLA
+       STD   PTHRZ
+       RTS
+PTVRT  RMB   2
+PTHRZ  RMB   2
+XH     RMB   2
+       FCB   0
+XV     RMB   1
+
+ISDIV
+       CLRB
+       LDX   PTHRZ
+       CMPX  #44
+       BGE   A@
+       LDX   #44
+       STX   PTHRZ
+       LDB   #255
+A@     CMPX  <LMX
+       BLE   B@
+       LDX   <LMX
+       STX   PTHRZ
+       LDB   #255
+B@     LDA   PTVRT
+       CMPA  #24
+       BHS   C@
+       LDA   #24
+       STA   PTVRT
+       LDB   #255
+C@     CMPA  <LMY
+       BLS   D@
+       LDY   PUTIT
+       BMI   D@
+       LDA   <LMY
+       STA   PTVRT
+       LDB   #255
+D@     TSTB
+       BEQ   ?RTS
+       LDA   #160
+       LDB   PTVRT
+       MUL
+       TFR   D,X
+       LDD   PTHRZ
+       LSRA
+       RORB
+       LEAX  D,X
+       STX   PUTIT
+       RTS
+
+
+ENDIT  CLRA
+       STA   PUTPGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JSR   PUTLSO
+       CLRA
+       STA   DEFLSO
+       JMP   [PAGEIN]
+
+
+ENDLSO BSR   ENDIT
+       JSR   [WTBUT]
+       JMP   [MENU]
+
+
+PUTPGE FCB   0
+XOFF   RMB   2
+
+UH1    RMB   2
+UH2    RMB   2
+UV1    RMB   1
+UV2    RMB   1
+UH1A   RMB   2
+UH2A   RMB   2
+UV1A   RMB   1
+UV2A   RMB   1
+
+THNTHK FCB   0
+
+GMENU  JMP   [MENU]
+       END
+

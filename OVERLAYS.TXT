@@ -1,0 +1,723 @@
+       NAM   OVERLAYS
+
+       ORG   $6000
+       INCL  DEFS.TXT :7
+       INCL  LOWDEFS.TXT :7
+
+TASK0  EQU   %01000000
+TASK1  EQU   %01000001
+
+TEMP1  EQU   LV1
+TEMP2  EQU   LV2
+
+       FDB   INVOV  INVERT
+       FDB   FILLOV FILL
+       FDB   THICK  THICKEN
+       FDB   TRACE  TRACE EDGES
+       FDB   FLIPH  FLIP H
+       FDB   FLIPV  FLIP V
+       FDB   REMAP  REMAP
+       FDB   TILTH  TILT H
+       FDB   TILTV  TILT V
+       FDB   STRET  STRETCH
+       FDB   A@     ROTATE
+       FDB   SHADOW SHADOW
+       FDB   BENDH  BEND H
+       FDB   BENDV  BEND V
+       FDB   CUT    CUT
+       FDB   COPY   COPY
+       FDB   PASTE  PASTE
+       FDB   CLROV  CLEAR
+       FDB   INCNUM INC #
+A@     JMP   [MENU]
+
+PAGE5  LDX   #$2425
+       STX   $FFA4
+       LDX   #$2627
+       STX   $FFA6
+       RTS
+
+PAGE6  LDX   #$2021
+       STX   $FFA4
+       LDX   #$2223
+       STX   $FFA6
+       RTS
+
+FILLOV JSR   PAGE6
+       LDB   <PATTRN
+       BRA   FILLO
+
+CLROV  JSR   PAGE6
+       LDB   <ERCOLR
+
+* FILL OVERLAY WITH THE
+* COLOR IN "B"
+FILLO  LDX   #0
+       STX   <BH1
+
+       PSHS  B
+
+       LDD   <OH2
+       SUBD  <OH1
+       STD   <BH2
+
+       CLR   <BV1
+       LDA   <OYSZE
+       STA   <BV2
+
+       PULS  B
+
+       JSR   [FILLED]
+
+DONEOV CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       BSR   DOWN
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [VIEW]
+       JMP   [MENU]
+
+* THIS PUTS THE OVERLAY DOWN
+* ON PAGE #0
+DOWN   CLR   <WPAGE
+       JMP   [MOVE9]
+
+* FLIP HORIZONTAL
+FLIPH  JSR   PAGE6
+
+       LDA   <OYSZE
+       STA   <TEMP1
+       LDU   #$8000
+
+A@     PSHS  U
+       TFR   U,X
+       LDB   <OXSZE
+       INCB
+       ABX
+B@     LDA   ,U
+       TFR   A,B
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       PSHS  A
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       ORB   ,S
+       STB   ,S
+       LDA   ,X
+       TFR   A,B
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       PSHS  A
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       ORB   ,S+
+       STB   ,U+
+       PULS  A
+       STA   ,X
+       DEX
+       PSHS  X
+       CMPU  ,S++
+       BLS   B@
+       PULS  U
+       LEAU  160,U
+       DEC   <TEMP1
+       LBNE  A@
+
+       LDA   <OXL
+       CMPA  <OXR
+       LBEQ  DONEOV
+
+       LDA   <OXL
+       CMPA  #$FF
+       LBNE  FHSR
+
+* FLIP HORIZONTAL SHIFT LEFT
+
+       LDX   #$8000
+       LDA   <OYSZE
+       STA   <TEMP1
+A@     LDB   <OXSZE
+       ADDB  #2
+       PSHS  X
+B@     LDA   ,X+
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       PSHS  A
+       LDA   ,X
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       ORA   ,S+
+       STA   -1,X
+       DECB
+       BNE   B@
+       PULS  X
+       LEAX  160,X
+       DEC   <TEMP1
+       BNE   A@
+       JMP   DONEOV
+
+* FLIP HORIZONTAL SHIFT RIGHT
+FHSR   LDX   #$8000
+       LDB   <OXSZE
+       ADDB  #2
+       ABX
+
+       LDA   <OYSZE
+       STA   <TEMP1
+A@     LDB   <OXSZE
+       ADDB  #2
+       PSHS  X
+B@     LDA   ,X
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       PSHS  A
+       LDA   ,-X
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       STA   1,X
+       DECB
+       BNE   B@
+       PULS  X
+       LEAX  160,X
+       DEC   <TEMP1
+       BNE   A@
+       JMP   DONEOV
+
+* FLIP VERTICAL
+FLIPV  JSR   PAGE6
+
+       LDU   #$8000
+
+       LDA   <OYSZE
+       DECA
+       LDB   #160
+       MUL
+       ADDA  #$80
+       TFR   D,X
+
+* U=TOP ROW
+* X=BOTTOM ROW
+
+* COPY BOT ROW TO BUFFER
+FLIPV2 PSHS  X,U
+
+       LDU   #POINTS
+A@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       CMPU  #POINTS+160
+       BLO   A@
+
+       PULS  X,U
+       PSHS  X,U
+
+* COPY TOP ROW TO BOT ROW
+
+       LDA   #40
+       PSHS  A
+A@     LDD   ,U++
+       STD   ,X++
+       LDD   ,U++
+       STD   ,X++
+       DEC   ,S
+       BNE   A@
+
+       LEAS  1,S
+       PULS  X,U
+       PSHS  X,U
+
+* COPY BUFFER TO TOP ROW
+
+       LDX   #POINTS
+A@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       CMPX  #POINTS+160
+       BLO   A@
+
+       PULS  X,U
+
+       LEAX  -160,X
+       LEAU  160,U
+       PSHS  X
+       CMPU  ,S++
+       LBLS  FLIPV2
+
+       JMP   DONEOV
+
+* INVERT OVERLAY
+INVOV  JSR   PAGE6
+       BSR   INVO
+       JMP   DONEOV
+
+* INVERT SUBROUTINE
+INVO   LDX   #$8000
+
+A@     COM   ,X+
+       COM   ,X+
+       COM   ,X+
+       COM   ,X+
+       CMPX  #$8000+32000
+       BNE   A@
+
+       RTS
+
+SHADOW CLR   SHDOW
+       BRA   TRACE2
+
+* TRACE EDGES
+TRACE  LDA   #$FF
+       STA   SHDOW
+TRACE2 LDU   #$8000
+
+       LDA   <ERCOLR
+       STA   YRGT
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   YLFT
+
+       JSR   DOTHIK
+* PAGE 5 = ORIGINAL DATA(TASK 0)
+* PAGE 6 = THICKENED    (TASK 1)
+
+       LDU   #$8000
+       LDB   <OYSZE
+       STB   <TEMP1
+A@     BSR   T1LNE
+       LEAU  160,U
+       DEC   <TEMP1
+       BNE   A@
+
+       JMP   DONEOV & CONTINUE
+
+T1LNE  PSHS  U
+
+       LDB   <OXSZE
+       ADDB  #2
+       STB   <TEMP2
+
+A@     LDA   #TASK1
+       STA   $FF91
+       LDB   ,U
+       LDA   #TASK0
+       STA   $FF91
+       PSHS  B
+       ANDB  #%11110000
+       CMPB  YLFT
+       BEQ   B@
+       LDA   ,U
+       ANDA  #%00001111
+       ORA   YLFT
+       LDB   #TASK0
+       STA   ,U
+B@     PULS  B
+       ANDB  #%00001111
+       CMPB  YRGT
+       BEQ   C@
+       LDA   ,U
+       ANDA  #%11110000
+       ORA   YRGT
+       STA   ,U
+C@     LEAU  1,U
+       DEC   <TEMP2
+       BNE   A@
+
+       PULS  U,PC
+
+THICK  BSR   DOTHIK
+       JMP   DONEOV
+
+DOTHIK LDA   #6
+       LDB   #5
+       JSR   [PCOPY]
+
+       JSR   PAGE6
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   #$2425
+       STX   $FFAC
+       LDX   #$2627
+       STX   $FFAE
+
+       LDA   <OYSZE
+       STA   <TEMP1
+
+       LDU   #$8000
+G@     PSHS  U
+       LDB   <OXSZE
+       ADDB  #2
+       PSHS  B
+A@     LDB   #TASK1
+       STB   $FF91
+       LDB   ,U
+       PSHS  B
+       TFR   B,A
+       LDB   #TASK0
+       STB   $FF91
+       LSRA
+       LSRA    IS THE LEFT
+       LSRA    PIXEL THE
+       LSRA    BACKGND COLOR?
+       CMPA  <ERCOLR
+       LBEQ  ZRGT  IF SO
+       STA   TRGT
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   TLFT
+       ORA   TRGT
+       STA   TFLL
+       STA   ,U
+       STA   -160,U
+       STA   160,U
+       LDA   -161,U
+       ANDA  #%11110000
+       ORA   TRGT
+       STA   -161,U
+       LDA   -1,U
+       ANDA  #%11110000
+       ORA   TRGT
+       STA   -1,U
+       LDA   159,U
+       ANDA  #%11110000
+       ORA   TRGT
+       STA   159,U
+       TST   SHDOW
+       BNE   ZRGT
+* EXTRA SETS FOR SHADOWS
+       LDA   319,U
+       ANDA  #$F0
+       ORA   TRGT
+       STA   319,U
+       LDA   TFLL
+       STA   320,U
+       LDA   321,U
+       ANDA  #$0F
+       ORA   TLFT
+       STA   321,U
+       LDA   161,U
+       ANDA  #$0F
+       ORA   TLFT
+       STA   161,U
+       LDA   1,U
+       ANDA  #$0F
+       ORA   TLFT
+       STA   1,U
+       LDA   -159,U
+       ANDA  #$0F
+       ORA   TLFT
+       STA   -159,U
+*
+ZRGT   PULS  B
+       ANDB  #%00001111
+       CMPB  <ERCOLR
+       BEQ   ZNXT
+       STB   TRGT
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       STB   TLFT
+       ORB   TRGT
+       STB   TFLL
+       TFR   B,A
+       STA   ,U
+       STA   -160,U
+       STA   160,U
+       LDA   -159,U
+       ANDA  #%00001111
+       ORA   TLFT
+       STA   -159,U
+       LDA   161,U
+       ANDA  #%00001111
+       ORA   TLFT
+       STA   161,U
+       LDA   1,U
+       ANDA  #%00001111
+       ORA   TLFT
+       STA   1,U
+       TST   SHDOW
+       BNE   ZNXT
+* EXTRA SHADOWED SETS
+       LDA   TFLL
+       STA   1,U
+       STA   -159,U
+       STA   161,U
+       STA   320,U
+       STA   321,U
+*
+ZNXT   LEAU  1,U
+       DEC   ,S
+       LBNE  A@
+       LEAS  1,S
+       PULS  U
+       LEAU  160,U
+       DEC   <TEMP1
+       LBNE  G@
+
+       RTS
+
+SHDOW  FCB   0
+
+FILEN  FCC /CLIP # XCUT/
+CUT    LDX   <OH1
+       PSHS  X
+       JSR   DOWN
+       LDA   #1
+       LDB   #8
+       JSR   [PCOPY]
+
+       LDA   [OVNUM]
+       STA   FILEN+7
+       LDX   #FILEN
+       LDU   #$94C
+A@     LDA   ,X+
+       STA   ,U+
+       CMPX  #FILEN+11
+       BNE   A@
+       JSR   [OPENO]
+
+       CLRA
+       JSR   [WRTBYT]
+
+       LDA   <OH1+1
+       JSR   [WRTBYT]
+       LDA   <OH1
+       JSR   [WRTBYT]
+       LDA   <OH2+1
+       JSR   [WRTBYT]
+       LDA   <OH2
+       JSR   [WRTBYT]
+       LDA   <OV1
+       JSR   [WRTBYT]
+       LDA   <OV2
+       JSR   [WRTBYT]
+       LDA   <OXL
+       JSR   [WRTBYT]
+       LDA   <OXR
+       JSR   [WRTBYT]
+       LDA   <OXSZE
+       JSR   [WRTBYT]
+       LDA   <OYSZE
+       JSR   [WRTBYT]
+
+       JSR   PAGE6
+       LDU   #$8000
+
+       LDB   <OYSZE
+       STB   <TEMP2
+A@     PSHS  U
+       LDB   <OXSZE
+       ADDB  #2
+B@     LDA   ,U+
+       JSR   [WRTBYT]
+       DECB
+       BNE   B@
+       PULS  U
+       LEAU  160,U
+       DEC   <TEMP2
+       BNE   A@
+
+       JSR   [CLOSE]
+       CLR   $FF40
+       CLR   $986
+
+       PULS  X
+       STX   <OH1
+       LDA   #6
+       JSR   [PAGEIN]
+       LDB   <ERCOLR
+       PSHS  B
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       ORB   ,S+
+       TFR   B,A
+       LDX   #$8000
+A@     STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       STD   ,X++
+       CMPX  #$8000+32000
+       BNE   A@
+
+       JSR   [PUTOVL]
+       JMP   [MENU]
+
+COPY   CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   DOWN
+       JSR   [PUT]
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+PASTE  LDX   <OH1
+       BNE   A@
+       JSR   [PUT]
+       LDA   #1
+       LDB   #8
+       JSR   [PCOPY]
+A@
+
+       LDX   <OH1
+       BEQ   A@
+* IF THERE IS ALREADY AN
+* OVERLAY UP, PUT IT DOWN!
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       CLRA
+       JSR   [PAGEIN]
+       LDA   #2
+       JSR   [VIEW]
+       JSR   DOWN
+       JSR   [PUT]
+       LDA   #1
+       LDB   #8
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+A@     LDX   <OH1
+       BNE   B@
+* GO TO EDIT MODE IF NOT
+* ALREADY THERE:
+       LDX   [OLDJMP]
+       JSR   [INVBOX]
+       LDX   EDYBOX
+       LDY   4,X
+       STY   [RSCRS]
+       LDY   6,X
+       STY   [INCNT]
+       STX   [OLDJMP]
+       JSR   [INVBOX]
+       LDA   #255
+       STA   <EGGRET
+       JSR   [SETCRS]
+       CLR   <EGGRET
+B@
+
+       LDA   [OVNUM]
+       STA   FILEN+7
+       LDX   #FILEN
+       LDU   #$94C
+A@     LDA   ,X+
+       STA   ,U+
+       CMPX  #FILEN+11
+       BNE   A@
+       JSR   [OPENI]
+
+       JSR   [GETBYT]
+
+       JSR   [GETBYT]
+       TFR   A,B
+       JSR   [GETBYT]
+       STD   <OH1
+       JSR   [GETBYT]
+       TFR   A,B
+       JSR   [GETBYT]
+       STD   <OH2
+       JSR   [GETBYT]
+       STA   <OV1
+       JSR   [GETBYT]
+       STA   <OV2
+       JSR   [GETBYT]
+       STA   <OXL
+       JSR   [GETBYT]
+       STA   <OXR
+       JSR   [GETBYT]
+       STA   <OXSZE
+       JSR   [GETBYT]
+       STA   <OYSZE
+
+       JSR   PAGE6
+       LDU   #$8000
+
+       LDB   <OYSZE
+       STB   <TEMP2
+A@     PSHS  U
+       LDB   <OXSZE
+       ADDB  #2
+B@     JSR   [GETBYT]
+       STA   ,U+
+       DECB
+       BNE   B@
+       PULS  U
+       LEAU  160,U
+       DEC   <TEMP2
+       BNE   A@
+
+       JSR   [CLOSE]
+
+       CLR   $FF40
+       CLR   $986
+
+       JMP   DONEOV
+
+* INCREMENT NUMBER OF OVERLAY
+* FOR CLIPBOOK
+INCNUM JSR   [POLCAT]
+       BEQ   Z@
+       SUBA  #$30
+       CMPA  #9
+       BHI   Z@
+       ADDA  #$30
+       BRA   A@
+Z@     LDA   [OVNUM]
+       INCA
+       CMPA  #'9
+       BLS   A@
+       LDA   #'0
+A@     STA   [OVNUM]
+       JMP   [MENU]
+
+TLFT   FCB   0
+TRGT   FCB   0
+TFLL   FCB   0
+YLFT   FCB   0
+YRGT   FCB   0
+
+       INCL  BENDH.TXT :6
+       INCL  BENDV.TXT :6
+       INCL  TILT.TXT :6
+       INCL  REMAP.TXT :6
+       INCL  STRETCH.TXT :6
+
+* LEAVE THIS AT THE BOTTOM
+* OF THE FILE
+POINTS RMB   224
+
+       END

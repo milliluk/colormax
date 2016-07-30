@@ -1,0 +1,1039 @@
+       NAM   PROPORTIONAL CHAROUT
+
+*WORK BUFFERS OF 8K LONG, @ 6000*
+*CHRSET BUFFERS @ $58000*
+*CHARACTER POINTERS @ $5FA00
+
+*6144 INTO THE BLOCK*
+*OF $3F*
+IN1TME FCB   0
+
+STTYPE LDD   #$FFFF
+       STD   <TXTX
+       JMP   SETCRS
+
+FNTNME BSZ   8
+LOADST LDY   #FNTNME
+       LDB   #8
+A@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   A@
+
+       LDX   #$6000
+       STX   OTTHR
+       LEAX  600,X
+       STX   OTTHR2
+       LEAX  600,X
+       STX   ENOT2
+
+       JSR   LOADSX
+
+       LDA   IN1TME
+       BNE   G@
+       LDA   #255
+       STA   IN1TME
+       RTS
+G@
+       JMP   MENU
+
+LOADSX LDA   #2
+       JSR   PAGEIN
+       LDX   #$8000+$7A00
+       STX   CHRLOC
+       LDD   #'FN
+       STD   $954
+       LDA   #'T
+       STA   $956
+       LDB   #8
+       LDX   #FNTNME
+       LDY   #$94C
+A@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   A@
+
+
+       LDA   FNTDRV
+       STA   >$EB
+
+       JSR   OPENI
+       JSR   GETBYX
+       STA   ROWSVE
+       STA   CHRROW
+       LDX   #$8000
+       LDY   CHRLOC
+       LDA   #96
+       PSHS  A
+
+A@     LDA   #3
+       JSR   PAGEIN
+       JSR   GETBYX
+       STA   ,Y
+       TSTA
+       BEQ   J@
+       STX   1,Y
+       LDB   CHRROW
+       PSHS  B
+F@     LDA   ,Y
+       LSRA
+       LSRA
+       LSRA
+       INCA
+       STA   WDT8
+       PSHS  A
+       LDU   #THREE
+       JSR   GETBYX
+       STA   ,U
+       JSR   GETBYX
+       STA   1,U
+       JSR   GETBYX
+       STA   2,U
+L@     LDA   ,U+
+       STA   ,X+
+       DEC   ,S
+       BNE   L@
+       LEAS  1,S
+       DEC   ,S
+       BNE   F@
+       LEAS  1,S
+       BRA   C@
+J@     LDA   #3
+       LDB   CHRROW
+       MUL
+       TFR   D,U
+R@     JSR   GETBYX
+       LEAU  -1,U
+       CMPU  #0
+       BNE   R@
+C@     LEAY  3,Y
+       DEC   ,S
+       BNE   A@
+
+       LEAS  1,S
+
+       JSR   CLOSE
+
+       CLR   $FF40
+       CLR   $986
+
+       LDA   #255
+       STA   SETIN
+       RTS
+
+GETBYX JMP   GETBYT
+
+TYPE
+       LDX   <AX
+       LEAX  4,X
+       CMPX  #44
+       BHI   V@
+       LDX   #44
+V@     STX   OTPSX
+       STX   <TXTX
+       LDA   <AY
+       ADDA  #5
+       STA   OTPSY
+       STA   <TXTY
+       LDX   #$2DD
+       STX   LNEP
+       CLR   ,X
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       CLRA
+       JSR   PAGEIN
+       JSR   WTBUT
+       JMP   MENU
+
+
+
+TYPE2  PSHS  X,D,Y,U
+       LDX   <TXTX
+       CMPX  #$FFFF
+       BEQ   Z@
+       JSR   POLCAT
+       BEQ   Z@
+       JSR   RPLARW
+       BSR   TYPEX
+       JSR   DRWARW
+Z@     PULS  X,D,Y,U,PC
+
+TYPEX
+       CMPA  #13
+       BEQ   T@
+       CMPA  #8
+       BEQ   BCKSP
+       CMPA  #32
+       BLO   ?RTS
+       LDB   COLOR
+       PSHS  A
+       CLRA
+       JSR   PAGEIN
+       PULS  A
+       JSR   OTCHR
+       LDX   LNEP
+       STA   ,X+
+       CLR   ,X
+       STX   LNEP
+       RTS
+T@     LDA   <TXTY
+       ADDA  CHRROW
+       INCA
+       STA   <TXTY
+       STA   OTPSY
+       LDX   <TXTX
+       STX   OTPSX
+       LDX   #$2DD
+       STX   LNEP
+       CLR   ,X
+       JSR   PUT
+       RTS
+BCKSP  LDX   LNEP
+       CMPX  #$2DD
+       BEQ   ?RTS
+       DEX
+       CLR   ,X
+       STX   LNEP
+       CMPX  #$2DD
+       BNE   G@
+       LDX   <TXTX
+       STX   OTPSX
+       JSR   GET
+       RTS
+G@     BSR   PLNE
+       RTS
+
+UPDMDE JSR   PLNE
+       RTS
+
+Z@     CLRA
+       JSR   PAGEIN
+E@     RTS
+PLNE   TST   TYPING
+       BEQ   E@
+       TST   SETIN
+       BEQ   E@
+       TST   $2DD
+       BEQ   E@
+       LDX   <TXTX
+       CMPX  #$FFFF
+       BEQ   E@
+       CLRA
+       LDB   #2
+       JSR   PCOPY
+       LDA   #2
+       JSR   PAGEIN
+       JSR   GET
+       LDX   <TXTX
+       STX   OTPSX
+       LDA   <TXTY
+       STA   OTPSY
+       LDX   LNEP
+       CMPX  #$2DD
+       BEQ   Z@
+       LDX   #$2DD
+T@     LDA   ,X+
+       BEQ   K@
+       LDB   COLOR
+       JSR   OTCHR
+       TST   TOOMCH
+       BNE   K@
+       BRA   T@
+K@     CLRA
+       JSR   PAGEIN
+       LDA   #2
+       CLRB
+       JSR   PCOPY
+       BRA   Z@
+
+LNEP   RMB   2
+
+PCFRM  FCB   0
+PCTO   FCB   0
+
+
+TOOMCH FCB   0
+OLDA4  RMB   2
+OLDA6  RMB   2
+OLDA3  RMB   1
+
+*ENTER: A=CHAR
+*       B=COLOR
+*       OTPSX=X POS TO WRITE TO
+*       OTPSY=Y POS TO WRITE TO
+OTCHR  PSHS  X,D,Y,U
+       LDD   $FFA4
+       STD   OLDA4
+       LDD   $FFA6
+       STD   OLDA6
+       LDA   $FFA3
+       STA   OLDA3
+       LDA   #$3B SET MEMORY FOR $6000 BUFFERS
+       STA   $FFA3
+       LDA   #3 SET CHRSET
+       JSR   PAGEIN
+       LDA   ,S
+       CLR   TOOMCH
+       SUBA  #32
+       LDB   1,S
+       PSHS  B
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       ORB   ,S+
+       STB   TYPCOL
+       LDB   #3
+       MUL
+       ADDD  CHRLOC
+       TFR   D,X
+       LDA   #2
+       STA   ADVNCE
+       LDA   ROWSVE
+       STA   CHRROW
+       LDA   ,X+
+       STA   OTWDT
+       TSTA
+       LBEQ  OEXT
+       LSRA
+       LSRA
+       LSRA
+       INCA
+       STA   WDT8
+       LDX   ,X
+       STX   OTPOS
+
+       CLRA
+       CLRB
+       TST   ITALIC
+       BEQ   W@
+       LDB   CHRROW
+       LSRB
+W@     PSHS  D
+       LDD   OTPSX
+       ADDD  WDT16
+       ADDD  ,S++
+       CMPD  #308
+       LBHI  NPER2
+
+
+       LDA   OTPSY
+       LDB   #160
+       MUL
+       ADDD  #$8000
+       TFR   D,X
+       LDD   OTPSX
+       LSRA
+       RORB
+       LEAX  D,X
+       PSHS  X
+*X=SCREEN BYTE POSITION*
+       LDA   #1
+       STA   EXTRA
+       JSR   STYCLC
+
+       LDX   OTTHR2
+       LDA   #255
+A@     STA   ,X+
+       CMPX  ENOT2
+       BNE   A@
+
+       LDA   CHRROW
+       PSHS  A
+       LDA   OTWDT
+       LSRA
+       LSRA
+       LSRA
+       INCA
+       PSHS  A
+       LDX   OTPOS FROM FONT
+       LDY   OTTHR2 TO BUFFER
+A@     LDB   ,S
+B@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   B@
+       LDB   EXTRA
+       LDA   #255
+C@     STA   ,Y+
+       DECB
+       BNE   C@
+       DEC   1,S
+       BNE   A@
+       LEAS  2,S
+
+*ITALICS, BOLD, SHADOW, OUTLINE*
+*ALL TO BE INSERTED HERE*
+
+       TST   SHADOW
+       BEQ   Z@
+       INC   ADVNCE
+       TST   BOLD
+       BEQ   Z@
+       TST   ITALIC
+       BEQ   Z@
+       INC   ADVNCE
+Z@
+
+       TST   ITALIC
+       BEQ   Z@
+       JSR   DOITAL
+Z@
+
+       TST   BOLD
+       BEQ   Z@
+       JSR   DOBLD
+Z@
+
+
+*****END OF "STYLE" CODE*****
+
+
+*SHOULD I SHIFT IT RIGHT ONE BIT IF WE'RE ON AN ODD PIXEL??*
+       CLRB
+       LDA   OTPSX+1
+       LSRA
+       BCC   K@
+       ADDB  #1
+K@     TST   OUTLNE
+       BEQ   L@
+       ADDB  #1
+L@     TST   SHADOW
+       BEQ   V@
+       ADDB  #1
+V@     TSTB
+       LBEQ  P@
+*YEP*
+       PSHS  B
+U@     LDX   OTTHR2
+       LDB   CHRROW
+       PSHS  B
+A@     LDA   WDT8
+       ADDA  EXTRA
+       PSHS  A
+       CLRB
+       ORCC  #1
+B@     ROR   B,X
+       PSHS  CC
+       INCB
+       CMPB  1,S
+       BEQ   F@
+       PULS  CC
+       BRA   B@
+F@     PULS  CC
+       LEAS  1,S
+       LDA   WDT8
+       ADDA  EXTRA
+       LEAX  A,X
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+Z@     DEC   ,S
+       BNE   U@
+       LEAS  1,S
+P@
+
+       LDX   OTTHR
+       LDA   #255
+A@     STA   ,X+
+       CMPX  OTTHR2
+       BLO   A@
+
+
+*FOLLOWING EXPANDS IT TO 4 BITS*
+       LDA   WDT8
+       ADDA  EXTRA
+       PSHS  A
+       LDB   CHRROW
+       MUL
+       TFR   D,X
+       PULS  A
+       LSLA
+       LSLA
+       LDU   OTTHR
+       TST   OUTLNE
+       BEQ   Q@
+       LEAU  A,U
+Q@     TST   SHADOW
+       BEQ   ZTRR1
+       LEAU  A,U
+ZTRR1  LDY   OTTHR2
+       INC   CHRROW
+A@     LDA   #3
+       JSR   PAGEIN
+       LDA   ,Y+
+       PSHS  X,D,Y,U
+       PSHS  D
+       LDD   OLDA4
+       STD   $FFA4
+       LDD   OLDA6
+       STD   $FFA6
+       PULS  D
+       JSR   CHR2
+       PULS  X,D,Y,U
+       LEAU  4,U
+       DEX
+       BNE   A@
+
+       TST   SHADOW
+       BNE   A@
+       TST   OUTLNE
+       BEQ   A@
+       JSR   DOOUT
+A@
+
+       TST   SHADOW
+       BEQ   A@
+       JSR   DOSHD
+A@
+
+       TST   UNDLNE
+       BEQ   A@
+       JSR   DOUND
+A@
+
+       LDA   OTPSY
+       TST   CSTSHD
+       BEQ   A@
+       ADDA  #2
+A@     ADDA  CHRROW
+       CMPA  #154
+       BLO   I@
+       LEAS  2,S
+       JMP   NPER2
+I@
+
+
+       PULS  X
+
+       TST   CSTSHD
+       BEQ   Z@
+       LDA   TYPCOL
+       PSHS  A,X
+       CLR   TYPCOL shadow=black
+       LEAX  161,X
+       JSR   FNTPUT
+       PULS  A,X
+       STA   TYPCOL
+Z@     PSHS  A,X
+       JSR   FNTPUT
+       PULS  A,X
+
+       LDD   OTPSX
+       ADDD  WDT16
+       ADDD  ADVN16
+       STD   OTPSX
+OEXT   LDA   OLDA3
+       STA   $FFA3
+       LDX   OLDA4
+       STX   $FFA4
+       LDX   OLDA6
+       STX   $FFA6
+       PULS  X,D,Y,U,PC
+NPER   LEAS  5,S
+NPER2  COM   TOOMCH
+       BRA   OEXT
+
+
+
+
+
+STXX2  RMB   2
+OTPSX  FDB   100
+OTPSY  FCB   50
+TYPCOL FCB   0
+WDT8   FCB   0
+WDT16  FCB   0
+OTWDT  FCB   0
+OTPOS  RMB   2
+ROWSVE RMB   1
+CHRROW RMB   1
+CHRLOC RMB   2
+THREE  RMB   3
+EXTRA  FCB   0
+ITALIC FCB   0
+BOLD   FCB   0
+OUTLNE FCB   0
+SHADOW FCB   0
+ADVN16 FCB   0
+ADVNCE FCB   0
+*CHRLOC HAS (WIDTH OF CHAR) : 1
+*           (WORD OF LOCATE): 2
+
+
+FNTPUT
+       LDD   OTPSX
+       TST   CSTSHD
+       BEQ   B@
+       ADDD  #2
+B@     ADDD  WDT16
+       ADDD  ADVN16
+       CMPD  #309
+       LBHI  NPER
+       LDU   OTTHR
+       LDB   CHRROW
+       CLRA
+       TFR   D,Y
+       LEAX  -160,X
+       STX   STXX2
+C@     LDX   STXX2
+       LEAX  160,X
+       STX   STXX2
+       LDB   WDT8
+       ADDB  EXTRA
+       LSLB
+       LSLB
+A@     LDA   ,U
+       ANDA  ,X
+       PSHS  A
+       LDA   ,U
+       COMA
+       ANDA  TYPCOL
+       ORA   ,S+
+       STA   ,X
+       LEAU  1,U
+       LEAX  1,X
+       DECB
+       BNE   A@
+       LEAY  -1,Y
+       BNE   C@
+       RTS
+
+STYCLC
+       TST   ITALIC
+       BEQ   Z@
+       LDA   CHRROW
+       LSRA *SHIFTS EVERY OTHER
+*
+       LSRA
+       LSRA   /8
+       LSRA
+       INCA
+       ADDA  EXTRA
+       STA   EXTRA
+Z@
+
+       RTS
+
+DOBLD  LDX   OTTHR2
+       LDU   OTTHR
+A@     LDA   ,X+
+       STA   ,U+
+       CMPX  ENOT2
+       BLO   A@
+
+*^MAKE A COPY^*
+
+
+       LDX   OTTHR2
+       LDU   OTTHR
+       LDA   WDT8
+       ADDA  EXTRA
+       PSHS  A
+       LDA   CHRROW
+       PSHS  A
+A@     JSR   SHIFT1
+       LDB   1,S
+       ABX
+       DEC   ,S
+       BNE   A@
+       LEAS  2,S
+
+       LDX   OTTHR2
+       LDU   OTTHR
+A@     LDA   ,U+
+       ANDA  ,X
+       STA   ,X+
+       CMPX  ENOT2
+       BNE   A@
+
+       RTS
+
+SHIFT1
+       LDB   WDT8
+       ADDB  EXTRA
+       PSHS  B
+       CLRB
+       ORCC  #1
+B@     ROR   B,X
+       PSHS  CC
+       INCB
+       CMPB  1,S
+       BEQ   F@
+       PULS  CC
+       BRA   B@
+F@     PULS  CC
+       LEAS  1,S
+       RTS
+
+
+
+ITSFT  FCB   0
+DOITAL LDX   OTTHR2
+       LDA   CHRROW
+       LSRA
+       DECA
+       BMI   ?RTS
+       STA   ITSFT
+
+       LDA   EXTRA
+       ADDA  WDT8
+       PSHS  A
+
+       CLR   Z@
+P@     LDA   ITSFT
+Q@     TSTA
+       BEQ   R@
+       BSR   SHIFT1
+       DECA
+       BRA   Q@
+R@     LDB   ,S
+       ABX
+       COM   Z@
+       BNE   U@
+       DEC   ITSFT
+U@     BNE   P@
+       LEAS  1,S
+       RTS
+Z@     FCB   0
+
+COMOUT
+       PSHS  D
+       LDD   ENOT2
+       SUBD  OTTHR2
+       TFR   D,Y
+       PULS  D
+A@     COM   ,X+
+       LEAY  -1,Y
+       BNE   A@
+       RTS
+
+O@     RMB   1
+DOOUT  LDX   OTTHR
+       BSR   COMOUT
+       LDU   OTTHR2
+       LDA   #0
+W@     STA   ,U+
+       CMPU  ENOT2
+       BNE   W@
+       LDX   OTTHR
+       LDU   OTTHR2
+       LDA   WDT8
+       ADDA  EXTRA
+       LSLA
+       LSLA
+       LDB   CHRROW
+       MUL
+       TFR   D,Y total # per character
+       LDB   WDT8
+       ADDB  EXTRA
+       LSLB
+       LSLB bytes per char line
+       STB   O@
+A@     LDB   O@
+       LDA   ,X
+       BNE   K@
+       JMP   G@
+K@     CMPA  #%11110000
+       BNE   H@
+       LDA   #%11111111
+       STA   B,U
+       STA   ,U
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+       INCB
+       LDA   #%00001111
+       ORA   -1,U
+       STA   -1,U
+       NEGB
+       LDA   #255
+       STA   B,U
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+       INCB
+       LDA   #%00001111
+       NEGB
+       DECB
+       ORA   B,U
+       STA   B,U
+       BRA   G@
+H@     CMPA  #%00001111
+       BNE   I@
+       LDA   #255
+       STA   ,U
+       STA   B,U
+       NEGB
+       STA   B,U
+       NEGB
+       LDA   #%11110000
+       ORA   1,U
+       STA   1,U
+       INCB
+       LDA   #%11110000
+       ORA   B,U
+       STA   B,U
+       DECB
+       NEGB
+       INCB
+       LDA   #%11110000
+       ORA   B,U
+       STA   B,U
+       BRA   G@
+I@     CMPA  #%11111111
+       BNE   G@
+       STA   ,U
+       STA   B,U
+       NEGB
+       STA   B,U
+       NEGB
+       LDA   #%11110000
+       ORA   1,U
+       STA   1,U
+       INCB
+       LDA   #%11110000
+       ORA   B,U
+       STA   B,U
+       DECB
+       NEGB
+       INCB
+       LDA   #%11110000
+       ORA   B,U
+       STA   B,U
+       DECB
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+       INCB
+       NEGB
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+       LDA   #%00001111
+       ORA   -1,U
+       STA   -1,U
+       LDA   #%11110000
+       ORA   1,U
+       STA   1,U
+G@     INX
+       LEAU  1,U
+       LEAY  -1,Y
+       LBNE  A@
+
+       INC   CHRROW
+       LDA   EXTRA
+       ADDA  WDT8
+       LSLA
+       LSLA
+       LDB   CHRROW
+       MUL
+       TFR   D,Y
+       PSHS  Y
+       LDX   OTTHR2
+       JSR   COMOUT
+       PULS  Y
+       LDX   OTTHR2
+       LDU   OTTHR
+A@     LDA   ,X+
+       EORA  ,U
+       STA   ,U+
+       LEAY  -1,Y
+       BNE   A@
+       RTS
+
+DOUND  LDX   OTTHR
+       LDB   WDT8
+       ADDB  EXTRA
+       PSHS  B
+       LSLB
+       LSLB
+       LDA   CHRROW
+       DECA
+       MUL
+       LEAX  D,X
+       PULS  B
+       LSLB
+       CLRA
+A@     STA   ,X+
+       DECB
+       BNE   A@
+       RTS
+
+
+O@     FCB   0
+P@     FCB   0
+DOSHD  LDX   OTTHR
+       JSR   COMOUT
+       LDU   OTTHR2
+W@     CLR   ,U+
+       CMPU  ENOT2
+       BNE   W@
+       LDX   OTTHR
+       LDU   OTTHR2
+       LDA   WDT8
+       ADDA  EXTRA
+       LSLA
+       LSLA
+       LDB   CHRROW
+       MUL
+       TFR   D,Y
+       LDB   WDT8
+       ADDB  EXTRA
+       LSLB
+       LSLB
+       STB   O@
+       ADDB  O@
+       STB   P@
+A@     LDB   O@
+       LDA   ,X
+       BNE   K@
+       JMP   G@
+K@     CMPA  #%00001111
+       BNE   L@
+       LDA   #%11111111
+       STA   ,U
+       STA   1,U
+       STA   B,U
+       INCB
+       STA   B,U
+       LDB   P@
+       STA   B,U
+       INCB
+       STA   B,U
+       LDB   O@
+       NEGB
+       STA   B,U
+       INCB
+       STA   B,U
+       JMP   G@
+L@     CMPA  #%11110000
+       BNE   M@
+       LDA   #255
+       STA   ,U
+       STA   B,U
+       NEGB
+       STA   B,U
+       LDB   P@
+       STA   B,U
+*LEFT SIDE*
+       LDB   O@
+       NEGB
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+       LDA   #%00001111
+       ORA   -1,U
+       STA   -1,U
+       LDB   O@
+       LDA   #%00001111
+       DECB
+       ORA   B,U
+       STA   B,U
+       LDB   P@
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+*RIGHT*
+       LDB   O@
+       NEGB
+       INCB
+       LDA   #%11110000
+       ORA   B,U
+       STA   B,U
+       LDA   #%11110000
+       ORA   1,U
+       STA   1,U
+       LDA   #%11110000
+       LDB   O@
+       INCB
+       ORA   B,U
+       STA   B,U
+       LDA   #%11110000
+       LDB   P@
+       INCB
+       ORA   B,U
+       STA   B,U
+       JMP   G@
+M@     CMPA  #255
+       BNE   G@
+       STA   ,U
+       STA   1,U
+       STA   B,U
+       INCB
+       STA   B,U
+       LDB   O@
+       NEGB
+       STA   B,U
+       INCB
+       STA   B,U
+       LDB   P@
+       STA   B,U
+       INCB
+       STA   B,U
+       LDB   O@
+       NEGB
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+       LDA   #%00001111
+       ORA   -1,U
+       STA   -1,U
+       LDA   #%00001111
+       LDB   O@
+       DECB
+       ORA   B,U
+       STA   B,U
+       LDB   P@
+       DECB
+       LDA   #%00001111
+       ORA   B,U
+       STA   B,U
+G@     INX
+       LEAU  1,U
+       LEAY  -1,Y
+       LBNE  A@
+
+       INC   CHRROW
+       INC   CHRROW
+
+       LDA   EXTRA
+       ADDA  WDT8
+       LSLA
+       LSLA
+       LDB   CHRROW
+       MUL
+       TFR   D,Y
+       PSHS  Y
+       LDX   OTTHR2
+       JSR   COMOUT
+       PULS  Y
+       LDX   OTTHR2
+       LDU   OTTHR
+A@     LDA   ,X+
+       EORA  ,U
+       STA   ,U+
+       LEAY  -1,Y
+       BNE   A@
+       RTS
+
+
+
+SETIN  FCB   0
+
+
+UNDLNE FCB   0
+CSTSHD FCB   0
+
+       END
+
+
+

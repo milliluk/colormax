@@ -1,0 +1,558 @@
+       NAM   Rotate
+
+*Given the angle in ROTANG*
+*(in DEGREES)
+*Rotate the damned thing
+
+DOROT  LDA   #7
+       JSR   [PAGEIN]
+       LDA   <ERCOLR
+       JSR   CLS
+
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   #$2021
+       STX   $FFAC
+       LDX   #$2223
+       STX   $FFAE
+
+       LDD   ROTANG
+       JSR   SINE
+       LDD   ROTANG
+       JSR   COSINE
+
+
+*Find it's width*
+       LDD   <OH2
+       SUBD  <OH1
+       ADDD  #1
+       BITB  #1 an odd value.
+       BNE   G@ for screen
+       ADDD  #1 centering
+G@     PSHS  D
+
+*Find it's length*
+       CLRA
+       LDB   <OV2
+       SUBB  <OV1
+       BITB  #1
+       BNE   G@
+       ADDD  #1
+G@     PSHS  D
+
+*Calc it's upper LEFT* H *
+       LDD   2,S
+       LSRA
+       RORB
+       STD   RGH
+       COMA
+       COMB
+       ADDD  #1
+       STD   UPH
+
+*Calc it's UPPER left* V *
+       LDD   ,S
+       LSRA
+       RORB
+       STD   RGV
+       COMA
+       COMB
+       ADDD  #1
+       STD   UPV
+       STD   CV
+
+A@     LDX   UPH
+       STX   CH
+       LDU   2,S
+       LEAU  -1,U
+B@     LDX   CH
+       LDY   CV
+       JSR   RPOINT
+       CMPB  <ERCOLR
+       BEQ   JHG
+       JSR   ROTPOS
+       JSR   RSET
+       INX
+       JSR   RSET
+JHG    LDX   CH
+       INX
+       STX   CH
+       LEAU  -1,U
+       CMPU  #0
+       BNE   B@
+       LDX   CV
+       INX
+       STX   CV
+       LDX   ,S
+       DEX
+       STX   ,S
+       BNE   A@
+       LEAS  4,S
+
+
+       CLR   $FF91
+
+       LDA   #7
+       JSR   [PAGEIN]
+       JSR   FNDLM3
+
+*RESTRICT IT!!*
+       LDA   LMV2
+       SUBA  LMV1
+       INCA
+       CMPA  #131
+       BLO   Z@
+       LDA   LMV1
+       ADDA  #125
+       STA   LMV2
+Z@
+
+       LDD   LMH2
+       SUBD  LMH1
+       ADDD  #1
+       CMPD  #265
+       BLO   Z@
+       LDD   LMH1
+       ADDD  #260
+       STD   LMH2
+Z@
+
+
+*BLOCK MOVE THE DAMNED THING*
+
+*FIND HEIGHT*
+       LDA   LMV2
+       SUBA  LMV1
+       INCA
+       PSHS  A
+
+*FIND WIDTH IN BYTES*
+       LDD   LMH1
+       LSRA
+       RORB
+       PSHS  D
+       LDD   LMH2
+       LSRA
+       RORB
+       SUBD  ,S++
+       ADDD  #1
+       PSHS  D
+
+       LDA   #160
+       LDB   LMV1
+       MUL
+       ADDD  #$8000
+       TFR   D,U
+       LDD   LMH1
+       LSRA
+       RORB
+       LEAU  D,U
+
+       LDB   #1
+       LDX   #$8000
+A@     LDY   ,S
+       PSHS  U,X
+B@     LDA   ,U+
+       STB   $FF91
+       STA   ,X+
+       CLR   $FF91
+       LEAY  -1,Y
+       BNE   B@
+       PULS  X,U
+       LEAX  160,X
+       LEAU  160,U
+       DEC   2,S
+       BNE   A@
+       LEAS  3,S
+
+       LDY   #44
+       LDA   LMH1+1
+       LSRA
+       BCC   G@
+       LEAY  1,Y
+G@     STY   <OH1
+
+       LDA   #24
+       STA   <OV1
+
+       LDD   LMH2
+       SUBD  LMH1
+       ADDD  <OH1
+       STD   <OH2
+
+       LDA   LMV2
+       SUBA  LMV1
+       ADDA  #24
+       STA   <OV2
+
+       LDB   #%11111111
+       LDA   <OH1+1
+       LSRA
+       BCC   A@
+       LDB   #%00001111
+A@     STB   <OXL
+
+       LDB   #%11110000
+       LDA   <OH2+1
+       LSRA
+       BCC   A@
+       LDB   #%11111111
+A@     STB   <OXR
+
+       LDD   <OH1
+       LSRA
+       RORB
+       PSHS  D
+       LDD   <OH2
+       LSRA
+       RORB
+       SUBD  ,S++
+       SUBD  #1
+       STB   <OXSZE
+
+       LDA   LMV2
+       SUBA  LMV1
+       INCA
+       STA   <OYSZE
+
+
+       CLRA
+       JSR   [PAGEIN]
+       CLR   <WPAGE
+       JSR   [MOVE9]
+       JMP   [MENU]
+
+
+
+
+*Rotate a position*
+*ENTER with X=x pos, Y=y pos
+*EXIT with X=new pos, Y=new pos
+* Note that the coords are SIGNED around the rotation point!!!
+ROTPOS PSHS  U,D
+       BSR   ROTPO1
+       PULS  U,D,PC
+ROTPO1 PSHS  X,Y
+
+*Do: X'=X*COS(angle)+Y*SIN(angle)
+       LDU   COSVAL
+       STU   <LMH2
+       LDU   #LMH2
+       STX   <LMH1
+       LDX   #LMH1
+       JSR   MUL16X
+       LDD   PRDUCT
+       PSHS  D
+       LDY   4,S
+       STY   <LMH1
+       LDY   SINVAL
+       STY   <LMH2
+       JSR   MUL16X
+       LDD   PRDUCT
+       ADDD  ,S++
+       STD   <BH2
+
+*Now, do:
+*Y'=Y*COS(angle)-X*SIN(angle)
+
+       LDY   ,S
+       STY   <LMH1
+       LDY   SINVAL
+       STY   <LMH2
+       JSR   MUL16X
+       LDY   PRDUCT
+       PSHS  Y
+       LDY   COSVAL
+       STY   <LMH2
+       LDY   4,S
+       STY   <LMH1
+       JSR   MUL16X
+       LDD   PRDUCT
+       SUBD  ,S++
+       STD   2,S
+       LDX   <BH2
+       STX   ,S
+       PULS  X,Y,PC
+
+
+
+
+MUL16X CLR   ,-S
+       LDD   ,X
+       BPL   H@
+       COMA
+       COMB
+       ADDD  #1
+       COM   ,S
+H@     LSLB
+       ROLA
+       TST   ,S+
+       BEQ   J@
+       COMA
+       COMB
+       ADDD  #1
+J@     STD   ,X
+
+
+*MUL16S*
+*Signed 16 bit multiply
+*Multiply ,X times ,U
+*Answer is output in PRDUCT (32 bits!)
+MUL16S PSHS  X,D,Y,U
+       CLR   ,-S neg flag
+       LDD   ,X
+       BPL   A@
+       COM   ,S
+       COMA
+       COMB
+       ADDD  #1
+       STD   ,X
+A@
+
+       LDD   ,U
+       BPL   A@
+       COM   ,S
+       COMA
+       COMB
+       ADDD  #1
+       STD   ,U
+A@
+
+       LDY   #PRDUCT
+       CLR   ,Y
+       CLR   1,Y
+       CLR   2,Y
+       CLR   3,Y
+
+       LDA   1,X
+       LDB   1,U
+       MUL
+       STD   2,Y
+
+       LDA   ,X
+       LDB   1,U
+       MUL
+       ADDD  1,Y
+       STD   1,Y
+       BVC   A@
+       INC   ,Y
+A@
+
+       LDA   ,U
+       LDB   1,X
+       MUL
+       ADDD  1,Y
+       STD   1,Y
+       BVC   A@
+       INC   ,Y
+A@
+
+       LDA   ,U
+       LDB   ,X
+       MUL
+       ADDD  ,Y
+       STD   ,Y
+
+       LDA   ,S+
+       BEQ   R@
+*Negate the answer*
+       COM   ,Y
+       COM   1,Y
+       COM   2,Y
+       COM   3,Y
+       INC   3,Y
+       BVC   R@
+       INC   2,Y
+       BVC   R@
+       INC   1,Y
+       BVC   R@
+       INC   ,Y
+R@     PULS  X,D,Y,U,PC
+
+
+SINVAL FDB   0
+COSVAL FDB   0
+
+*SINE*
+*Enter w/ D=angle (0-359)
+*Exit w/ SINVAL=the 16 bit signed sine value
+SINE   LDY   #SINVAL
+ENTSIN CMPD  #90
+       BLO   Q1
+       CMPD  #180
+       BLO   Q2
+       CMPD  #270
+       BLO   Q3
+*Q4*
+       PSHS  D
+       LDD   #360
+       SUBD  ,S++
+       BSR   LOOKUP
+       COMA
+       COMB
+       ADDD  #1
+       STD   ,Y
+       RTS
+Q3     SUBD  #180
+       BSR   LOOKUP
+       COMA
+       COMB
+       ADDD  #1
+       STD   ,Y
+       RTS
+Q2     PSHS  D
+       LDD   #180
+       SUBD  ,S++
+       BSR   LOOKUP
+       STD   ,Y
+       RTS
+Q1     BSR   LOOKUP
+       STD   ,Y
+       RTS
+
+COSINE LDY   #COSVAL
+       ADDD  #90
+       CMPD  #360
+       LBLO  ENTSIN
+       SUBD  #360
+       JMP   ENTSIN
+
+
+
+
+LOOKUP LSLB
+       ROLA
+       LDX   #ANGLES
+       LDD   D,X
+       RTS
+
+ANGLE
+ROTANG FDB   15
+
+*RPOINT*
+*Rotation PPOINT*
+*Uses signed coords, with center (0,0) at 160,96 (_ normal coords)
+*Enter w/ X=x pos, Y=y pos
+*Exit w/ B=color
+RPOINT PSHS  X,Y,U,A
+       BSR   RPOIN1
+       PULS  X,Y,U,A,PC
+RPOIN1
+       LDA   #1
+       STA   $FF91
+       CMPX  #0
+       BNE   J@
+       LDA   <OH1+1
+       LSRA
+       LBCS  PPB
+J@     CMPX  UPH
+       LBLT  PPB
+       CMPX  RGH
+       LBGT  PPB
+       CMPY  UPV
+       LBLT  PPB
+       CMPY  RGV
+       LBGT  PPB
+       EXG   X,D
+       SUBD  UPH
+       EXG   X,D
+       TFR   Y,D
+       SUBD  UPV
+       CMPD  #191
+       LBHI  PPB
+       CMPX  #319
+       LBHI  PPB
+       LDA   #160
+       MUL
+       ADDD  #$8000
+       TFR   D,U
+       TFR   X,D
+       PSHS  B
+       LSRA
+       RORB
+       LEAU  D,U
+       LSR   ,S+
+       BCC   G@
+       LDB   ,U
+       ANDB  #15
+       RTS
+G@     LDB   ,U
+       LSRB
+       LSRB
+       LSRB
+       LSRB
+       RTS
+PPB    LDB   <ERCOLR
+       RTS
+
+
+
+
+*RSET*
+*Rotation PSET*
+*Uses signed coords, with 0,0
+*being the exact center of the
+*screen 160,96
+*Enter: X=x coord, Y=y coord
+*       B=color to set to
+RSET   PSHS  X,D,Y,U
+       BSR   RSET1
+       PULS  X,D,Y,U,PC
+RSET1
+       CLR   $FF91
+       PSHS  B
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       ORB   ,S
+       STB   ,S
+       TFR   X,D
+       ADDD  #160
+       CMPD  #319
+       LBHI  INVAL
+       PSHS  D
+       TFR   Y,D
+       ADDD  #96
+       CMPD  #191
+       LBHI  INVAL2
+       LDA   #160
+       MUL
+       ADDD  #$8000
+       TFR   D,U
+       LDD   ,S
+       LSRA
+       RORB
+       LEAU  D,U
+       LDB   #%11110000
+       LSR   1,S
+       BCC   T@
+       LDB   #%00001111
+T@     LEAS  2,S
+       TFR   B,A
+       COMA
+       ANDA  ,U
+       ANDB  ,S+
+       PSHS  A
+       ORB   ,S+
+       STB   ,U
+       RTS
+INVAL2 LEAS  2,S
+INVAL  LEAS  1,S
+       RTS
+
+
+UPH    RMB   2
+UPV    RMB   2
+RGH    RMB   2
+RGV    RMB   2
+CH     RMB   2
+CV     RMB   2
+PRDUCT BSZ   4
+
+
+       END
+
+

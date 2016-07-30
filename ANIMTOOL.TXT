@@ -1,0 +1,388 @@
+       NAM   MGE file utility
+
+* BEWARE !!
+* ERIK'S BEEN HERE!
+
+PRSNXT EQU   $9F Parse NEXT char
+PRSLST EQU   $A5 Parse current char
+
+
+
+START  LDA   $200
+       CMPA  #12
+       LBHI  FNCERR
+       LSLA
+       LSLA
+       PSHS  A
+       LDA   #$30
+       SUBA  ,S+
+       TFR   A,B
+       INCB
+       STD   GRP1+1,PCR
+       ADDA  #2
+       ADDB  #2
+       STD   GRP2+1,PCR
+
+       JSR   PRSLST
+       CMPA  #':
+       LBNE  HELP
+
+       JSR   PRSNXT
+       CMPA  #135 "?" TOKEN
+       LBEQ  INFO
+       ANDA  #$DF kill possible lowercase
+       CLRB flag for monitor type
+       CMPA  #'R
+       BEQ   A@
+       CMPA  #'C
+       LBNE  SYNERR
+       LDB   #1
+A@     STB   MONTYP,PCR
+
+       JSR   PRSNXT
+       CMPA  #':
+       LBNE  SYNERR
+
+       JSR   PRSNXT
+       ANDA  #$DF
+       CMPA  #'L
+       BEQ   E@
+       CMPA  #'S
+       LBNE  SYNERR
+       CLRA
+E@     STA   TODO,PCR
+
+       JSR   PRSNXT
+       CMPA  #':
+       LBNE  SYNERR
+
+       JSR   PRSNXT
+       LBSR  PRSENM Parse the filename string
+
+       LDA   TODO,PCR
+       LBEQ  SVEPIX
+
+       LBSR  OPENI open file - input
+
+       LBSR  GETBYT get MGE resolution byte
+       TSTA Not low-res!
+       LBNE  BADRES
+
+*now - read in the 16 palettes*
+
+       LEAX  TEMP,PCR
+       LDB   #16
+A@     LBSR  GETBYT
+       STA   ,X+
+       DECB
+       BNE   A@
+
+       LBSR  GETBYT
+*A now holds which monitor type that the picture was made on
+*0=RGB
+*1=composite
+
+*Make 0/1 rather than 0/nz
+       TSTA
+       BEQ   A@
+       LDA   #1
+A@
+
+
+
+*Should I convert the palettes?
+       CMPA  MONTYP,PCR
+       LBEQ  NOCNV NOPE!
+
+       LEAX  RGBCMP,PCR Go from RGB to Composite?
+       TSTA
+       BEQ   A@
+       LEAX  CMPRGB,PCR Go from Composite to RGB?
+A@
+
+*** converts palettes from RGB to COMP or vice-versa
+       LEAY  TEMP,PCR
+       LDB   #16
+A@     LDA   ,Y
+       LDA   A,X
+       STA   ,Y+
+       DECB
+       BNE   A@
+
+*Don't convert*
+NOCNV  LDY   #$FFB0
+       LEAX  TEMP,PCR
+       LDB   #16
+A@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   A@
+
+*PALETTES ARE SET!*
+
+       LBSR  GETBYT get compression flag
+       PSHS  A
+
+*ignore 32 byte picture-name*
+       LDB   #32
+A@     LBSR  GETBYT
+       DECB
+       BNE   A@
+
+
+       PULS  A
+       TSTA compressed?
+       LBNE  NTCMP Nope
+
+*COMPRESSED READ*
+*read in the bitmap*
+
+       LDX   #$8000
+CMPLP  LBSR  GETBYT get # of times to repeat
+       TFR   A,B
+       LBSR  GETBYT get byte to repeat
+
+       TSTB length=0??
+       BEQ   CMPEND end..
+
+       LBSR  GRPPGE page ram in
+A@     STA   ,X+ repeat that
+       DECB byte..
+       BNE   A@
+       LBSR  NRMPGE page back
+       BRA   CMPLP
+
+*NON COMPRESSED READ*
+*read in bitmap*
+NTCMP  LDX   #$8000
+NTLP   LBSR  GETBYT
+       LBSR  GRPPGE flip pages
+       STA   ,X+
+       LBSR  NRMPGE flip back
+       CMPX  #$8000+32000 done?
+       BLO   NTLP
+
+CMPEND
+       LBSR  CLOSE
+       RTS
+
+SVEPIX LBSR  OPENO
+
+       CLRA res=320x200 16 color
+       LBSR  WRTBYT
+
+*write the palette out*
+       LDB   #16
+       LDX   #$FFB0
+A@     LDA   ,X+
+       LBSR  WRTBYT
+       DECB
+       BNE   A@
+
+*write out the montype*
+       LDA   MONTYP,PCR
+       LBSR  WRTBYT
+
+*no compression*
+       LDA   #255
+       LBSR  WRTBYT
+
+*Bozo title*
+       LEAX  UNT,PCR
+       LDB   #32
+R@     LDA   ,X+
+       LBSR  WRTBYT
+       DECB
+       BNE   R@
+
+*write out the bitmap*
+       LDX   #$8000
+A@     LBSR  GRPPGE
+       LDA   ,X+
+       LBSR  NRMPGE
+       LBSR  WRTBYT
+       CMPX  #$8000+32000
+       BNE   A@
+       LBSR  CLOSE
+       RTS
+
+*Bozo title*
+UNT    FCC   "BASIC Pix",0
+       ORG   UNT+32
+
+A@     FCC   "This file is at an incompatible",13
+       FCC   "resolution",13,0
+********
+*BADRES*
+********
+*Tells 'em that they're in a bad resolution!
+BADRES LEAX  A@,PCR
+       BSR   PRTMS
+       LBRA  FNCERR
+
+
+
+
+********
+*GRPPGE*
+********
+*
+* Pages in graphics screen at
+* $8000.. Kills interrupts, too.
+*
+GRPPGE PSHS  X,D,Y,U
+       LDA   #52
+       STA   $FF03
+       LDA   $FF02
+GRP1   LDD   #$3031
+       STD   $FFA4
+GRP2   LDD   #$3233
+       STD   $FFA6
+       PULS  X,D,Y,U,PC
+
+********
+*NRMPGE*
+********
+*
+* Pages in normal memory
+* and re-enables interrupts.
+*
+NRMPGE PSHS  X,D,Y,U
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STD   $FFA6
+       LDA   #53
+       STA   $FF03
+       PULS  X,D,Y,U,PC
+
+
+*******
+*OPENI*
+*******
+*
+* Open's a file for input
+* Entry: filename setup
+* Exit: file is opened!
+*
+OPENI  PSHS  X,D,Y,U
+       LDX   #$C959 Rom 1.0
+       LDD   $C004 Which ROM???
+       CMPD  #$D66C Rom 1.0!
+       BEQ   A@ !
+       LDX   #$CA07 Rom 1.1
+A@     JSR   ,X make call
+       PULS  X,D,Y,U,PC
+
+
+********
+*GETBYT*
+********
+* Gets a byte from the file
+*
+* Entry: none
+* Exit : Byte's in A
+GETBYT JMP   $A176
+
+********
+*WRTBYT*
+********
+*
+* writes a byte to file
+WRTBYT JMP   [$A002]
+
+*******
+*OPENO*
+*******
+*
+* Open it for output
+*
+OPENO  PSHS  X,D,Y,U
+       LDX   #$C956
+       LDD   $C004
+       CMPD  #$D66C
+       BEQ   A@
+       LDX   #$CA04
+A@     JSR   ,X
+       PULS  X,D,Y,U,PC
+
+
+*******
+*CLOSE*
+*******
+*
+* Closes an open file
+*
+* Entry: None
+* Exit: None
+*
+CLOSE  JMP   $A42D
+
+*******
+*PRTMS*
+*******
+* Enter: X pointing to msg
+* Exit : Well.. It PRINTS the msg!
+PRTMS  LDA   ,X+
+       BEQ   ?RTS
+       JSR   [$A002]
+       BRA   PRTMS
+
+
+
+
+********
+*PRSENM*
+********
+*
+PRSENM PSHS  X,D,Y,U
+       LEAX  A@,PCR
+       LDY   #$C88A Disk rom 1.0
+       LDD   $C004
+       CMPD  #$D66C Izzit 1.0?
+       BEQ   B@ yep
+       LDY   #$C938 Disk rom 1.1
+B@     JSR   ,Y
+       PULS  X,D,Y,U,PC
+A@     FCC   "MGE"
+
+SYNERR JMP   $B277 ?SN ERROR
+FNCERR JMP   $B44A ?FC ERROR
+
+
+
+
+
+RGBCMP
+ FCB   0,14,2,14,5,10,3,16,13,11,30,28,11,12,30,29
+ FCB   17,17,18,34,20,19,34,33,46,45,47,31,46,45,47,46
+ FCB   7,6,21,6,7,24,38,29,26,43,27,43,25,9,41,42
+ FCB   36,35,50,51,53,54,36,37,32,60,49,61,56,59,52,63
+
+CMPRGB
+       FCB   0,2,2,6,0,4,33,32,32,45,5,9,13,8,1,0
+       FCB   7,16,18,21,20,34,38,36,37,44,40,42,11,15,10,27
+       FCB   56,23,19,49,48,55,38,39,37,46,47,41,11,25,24,26
+       FCB   63,58,50,51,62,52,53,60,60,46,61,61,57,59,58,63
+
+
+TODO   RMB   1
+TEMP   RMB   16
+MONTYP RMB   1
+
+A@     FCC   "ANIMTOOL/BIN Version 1.0",13
+       FCC   "(C) 1987 Milliluk Technologies",13
+       FCC   "All rights reserved",13
+       FCC   ' EXEC:montype:cmd:"name"',13
+       FCC   "   montype=R or C",13
+       FCC   "   cmd=S (save)",13
+       FCC   "       L (load)",13
+       FCC   "   POKE &H200,frame # (0-12)",13,0
+HELP
+INFO   JSR   $A928
+       LEAX  A@,PCR
+       LBSR  PRTMS
+       JSR   PRSNXT
+       RTS
+
+       END

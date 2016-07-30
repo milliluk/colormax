@@ -1,0 +1,640 @@
+       NAM   ARROW
+
+********
+*MENARW*
+********
+*
+*Calls the MVEARW routine to
+*move and display a symbol.
+*this will  return when the
+*button is pressed.
+*ENTER: PUT THE CURRENTLY USED
+*symbol (other than the arrow)
+*in: <USESYM, <USEOUT (USESYM's outline)
+*    <USESY2, <USEOU2 (USESY2's outline)
+*
+*MENHK IS THE 16 BIT POINTER TO THE HOOK
+
+*EXIT:
+MENARW PSHS  X,D,Y,U
+       LDX   #ARROW
+       STX   SYM1
+       LDX   #ARR2
+       STX   SYM2
+       LDX   #AROUT
+       STX   SYMOUT
+       LDX   #AROU2
+       STX   SYMOU2
+       LDX   #ONMVE
+       STX   MVEHK
+       LDX   #ONCYC
+       STX   SITHK
+       JSR   JOYSTK
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       JSR   ONMVE
+
+A@     JSR   MVEARW
+       LDX   #RTS
+       STX   MVEHK
+       STX   SITHK
+       PULS  X,D,Y,U,PC
+
+ONMVE  PSHS  X,D,Y,U
+       LDX   <OH1
+       BEQ   R@
+       JSR   ISOVL
+       BRA   S@
+R@     LDA   <DEFLSO
+       CMPA  #255
+       BNE   S@
+       JSR   ISLSO
+S@
+
+       LDX   <AX
+       LDD   #44
+       SUBD  <GPNTH
+       PSHS  D
+       CMPX  ,S++
+       BLO   ONARW
+       LDD   #309
+       SUBD  <GPNTH
+       PSHS  D
+       CMPX  ,S++
+       BHI   ONARW
+       LDA   <AY
+       LDB   #24
+       SUBB  <GPNTV
+       PSHS  B
+       CMPA  ,S+
+       BLO   ONARW
+       LDB   #154
+       SUBB  <GPNTV
+       PSHS  B
+       CMPA  ,S+
+       BHI   ONARW
+       LDX   <USESYM
+       STX   SYM1
+       LDX   <USESY2
+       STX   SYM2
+       LDX   <USEOUT
+       STX   SYMOUT
+       LDX   <USEOU2
+       STX   SYMOU2
+       JSR   [MENHK]
+       PULS  X,D,Y,U,PC
+ONARW  LDX   #ARROW
+       STX   SYM1
+       LDX   #ARR2
+       STX   SYM2
+       LDX   #AROUT
+       STX   SYMOUT
+       LDX   #AROU2
+       STX   SYMOU2
+       JSR   [MENHK]
+       PULS  X,D,Y,U,PC
+
+ONCYC  LDA   #$BF
+       STA   $FF02
+       LDA   $FF00
+       BITA  #$40
+       BNE   D@
+       CLR   $FFB0
+       LDA   #$3F
+       STA   $FFBF
+       STA   $FF9A
+       LDB   CYCMRK
+       LDA   #'\
+       STA   CYCMRK
+       CLR   CYCFLG
+       CMPB  #'\
+       BEQ   B@
+       LDX   #CYCPAL
+       LDU   #$FFB0
+       LDB   #16
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+B@     LDA   #$BF
+       STA   $FF02
+C@     LDA   $FF00
+       BITA  #$40
+       BEQ   C@
+D@     LDA   #$DF
+       STA   $FF02
+       LDA   $FF00
+       BITA  #$40
+       BNE   F@
+       LDA   #$DF
+       STA   $FF02
+E@     LDA   $FF00
+       BITA  #$40
+       BEQ   E@
+       JSR   CYCSAV
+F@     LDA   #$FB
+       STA   $FF02
+       LDA   $FF00
+       BITA  #$40
+       BNE   ONSIT
+       LDA   #$7F
+       STA   $FF02
+       LDA   $FF00
+       BITA  #$40
+       BNE   ONSIT
+       COM   M3414
+G@     LDA   $FF00
+       BITA  #$40
+       BEQ   G@    
+
+ONSIT  TST   CYCFLG
+       BEQ   L@
+       JSR   DOCYC
+L@     PSHS  X
+       LDX   <OH1
+       PULS  X
+       BEQ   K@
+       PSHS  X,D,Y,U
+       JSR   EDITBX
+       JSR   MOVEOV
+       PULS  X,D,Y,U,PC
+K@     PSHS  A
+       LDA   <DEFLSO
+       CMPA  #255
+       PULS  A
+       BNE   ?RTS
+       PSHS  X,D,Y,U
+       LDU   $FFA4
+       PSHS  U
+       LDU   $FFA6
+       PSHS  U
+       TST   MARK9
+       BEQ   Y@
+       JSR   RPLARW
+Y@     JSR   [$6008]
+       PULS  U
+       STU   $FFA6
+       PULS  U
+       STU   $FFA4
+       TST   MARK9
+       BEQ   Z@
+       JSR   DRWARW
+Z@     PULS  X,D,Y,U,PC
+
+MENHK  FDB   RTS
+
+********
+*MVEARW*
+********
+*The joystick/arrow routine,
+*in which a symbol (usually an
+*arrow) is moved about the
+*screen.
+*ENTER: no conditions
+*EXIT:
+*
+* - returns when joystick
+*button is pressed.
+*
+* - calls MVEHK indirectly
+*when the joystick is moved
+*(the symbol is first erased)
+*
+* - the symbol "fonts" should
+*be in SYM1, SYMOUT for the
+*left justified symbol,
+*and SYM2, SYMOU2 for the right
+*justified symbol.
+*Note that each symbol must
+*be 5 bytes across and 14 bytes
+*down!!!!
+*
+* - coords are in <AX & <AY
+*                  ^ (16 bits!)
+MVEARW PSHS  X,D,Y,U
+       JSR   JOYSTK
+       LDD   <JOYX
+       STD   <AX
+       LDA   <JOYY
+       STA   <AY
+
+*DRAW IT THE FIRST TIME*
+A@     JSR   DRWARW
+B@     LDA   #255
+       STA   $FF02
+       LDA   $FF00
+       LSRA
+       BCS   T@
+       LDX   <OH1
+       BEQ   S@
+       JSR   ISOVL2
+       TSTA
+       BEQ   S@
+       JSR   ONCYC
+       BRA   T@
+S@     JMP   ARWBUT
+T@
+       JSR   JOYSTK
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   P@
+       LDA   <JOYY
+       CMPA  <AY
+       BNE   P@
+       TST   M33E8
+       BEQ   E@
+       LDX   M33E9
+       DEX
+       STX   M33E9
+       BNE   E@
+       CLR   M33E8
+E@     TST   TYPING
+       BEQ   W@
+       JSR   TYPE2
+W@     JSR   [SITHK]
+       BRA   B@
+P@     JSR   RPLARW
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       JSR   [MVEHK]
+       BRA   A@
+
+
+*CALL W/ SCREEN LOC IN <AX, <AY
+*AX IS 16 BITS, <AY IS 8*
+DRWARW PSHS  X,D,Y,U
+       LDX   #$8000
+       LDD   <AX
+       CMPD  #312
+       BLO   R@
+       LDD   #312
+R@     LSRA
+       RORB
+       LEAX  D,X
+       LDB   <AY
+       LDA   #160
+       MUL
+       LEAX  D,X
+
+       PSHS  X
+       LDY   #UNDARW
+       LDA   #14
+       PSHS  X
+       LDX   SYM1
+       CMPX  #SPCAN
+       PULS  X
+       BNE   T@
+       LDA   #16
+T@     STA   LDRW
+       PSHS  A
+A@     LDD   ,X
+       STD   ,Y++
+       LDD   2,X
+       STD   ,Y++
+       LDD   4,X
+       STD   ,Y++
+       LDD   6,X
+       STD   ,Y++
+       LEAX  160,X
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       PULS  X
+
+       LDY   SYM1
+       LDU   SYMOUT
+       LDA   <AX+1
+       LSRA
+       BCC   A@
+       LDY   SYM2
+       LDU   SYMOU2
+A@
+
+       STX   ARWADD
+
+       LDA   LDRW
+       PSHS  A
+
+A@     LDD   ,U++
+       ORA   ,X
+       ORB   1,X
+       EORA  ,Y
+       EORB  1,Y
+       STD   ,X
+       LDD   ,U++
+       ORA   2,X
+       ORB   3,X
+       EORA  2,Y
+       EORB  3,Y
+       STD   2,X
+       LDD   ,U++
+       ORA   4,X
+       EORA  4,Y
+       ORB   5,X
+       EORB  5,Y
+       STD   4,X
+       LDD   ,U++
+       ORA   6,X
+       EORA  6,Y
+       ORB   7,X
+       EORB  7,Y
+       STD   6,X
+       LEAY  8,Y
+       LEAX  160,X
+       CMPX  #$8000+30720
+       BHS   T@
+       DEC   ,S
+       BNE   A@
+T@     LEAS  1,S
+
+       PULS  X,D,Y,U,PC
+
+RPLARW PSHS  X,D,Y,U
+       LDA   LDRW
+       CMPA  #16
+       BNE   T@
+       LDB   #16
+       FCB   $8C
+T@     LDB   #14
+       PSHS  B
+       LDX   ARWADD
+       LDU   #UNDARW
+A@     LDD   ,U++
+       STD   ,X
+       LDD   ,U++
+       STD   2,X
+       LDD   ,U++
+       STD   4,X
+       LDD   ,U++
+       STD   6,X
+       LEAX  160,X
+       CMPX  #$8000+30720
+       BHS   E@
+       DEC   ,S
+       BNE   A@
+E@     LEAS  1,S
+       PULS  X,D,Y,U,PC
+
+ARWBUT JSR   RPLARW
+       CLR   M33ED
+       TST   M33E8
+       BEQ   A@
+       LDA   #$FF
+       STA   M33ED
+       CLR   M33E8
+       BRA   B@
+A@     LDA   #$FF
+       STA   M33E8
+       LDX   M33EB
+       STX   M33E9
+B@     PULS  X,D,Y,U,PC
+
+MVEHK  FDB   RTS
+RTS    RTS
+
+ARWADD FDB   0
+UNDARW RMB   8*16
+
+SYM1   FDB   XHAIR
+SYM2   FDB   XHAIR2
+SYMOUT FDB   XHOUT
+SYMOU2 FDB   XHOUT2
+
+*DATA NEXT IS FOR ARROW*
+ARR2
+ FDB $0000,$0000,$0000,$0000
+ FDB $00F0,$0000,$0000,$0000
+ FDB $00FF,$0000,$0000,$0000
+ FDB $00FF,$F000,$0000,$0000
+ FDB $00FF,$FF00,$0000,$0000
+ FDB $00FF,$FFF0,$0000,$0000
+ FDB $00FF,$FFFF,$0000,$0000
+ FDB $00FF,$FF00,$0000,$0000
+ FDB $00F0,$FF00,$0000,$0000
+ FDB $0000,$0FF0,$0000,$0000
+ FDB $0000,$0FF0,$0000,$0000
+ FDB $0000,$00FF,$0000,$0000
+ FDB $0000,$00FF,$0000,$0000
+ FDB 0,0,0,0
+ARROW
+ FDB $0000,$0000,$0000,$0000
+ FDB $0F00,$0000,$0000,$0000
+ FDB $0FF0,$0000,$0000,$0000
+ FDB $0FFF,$0000,$0000,$0000
+ FDB $0FFF,$F000,$0000,$0000
+ FDB $0FFF,$FF00,$0000,$0000
+ FDB $0FFF,$FFF0,$0000,$0000
+ FDB $0FFF,$F000,$0000,$0000
+ FDB $0F0F,$F000,$0000,$0000
+ FDB $0000,$FF00,$0000,$0000
+ FDB $0000,$FF00,$0000,$0000
+ FDB $0000,$0FF0,$0000,$0000
+ FDB $0000,$0FF0,$0000,$0000
+ FDB 0,0,0,0
+AROU2
+ FDB $0FF0,$0000,$0000,$0000
+ FDB $0FFF,$0000,$0000,$0000
+ FDB $0FFF,$F000,$0000,$0000
+ FDB $0FFF,$FF00,$0000,$0000
+ FDB $0FFF,$FFF0,$0000,$0000
+ FDB $0FFF,$FFFF,$0000,$0000
+ FDB $0FFF,$FFFF,$F000,$0000
+ FDB $0FFF,$FFFF,$F000,$0000
+ FDB $0FFF,$FFF0,$0000,$0000
+ FDB $0FF0,$FFFF,$0000,$0000
+ FDB $0F00,$FFFF,$0000,$0000
+ FDB $0000,$0FFF,$F000,$0000
+ FDB $0000,$0FFF,$F000,$0000
+ FDB $0000,$00FF,$F000,$0000
+AROUT
+ FDB $FF00,$0000,$0000,$0000
+ FDB $FFF0,$0000,$0000,$0000
+ FDB $FFFF,$0000,$0000,$0000
+ FDB $FFFF,$F000,$0000,$0000
+ FDB $FFFF,$FF00,$0000,$0000
+ FDB $FFFF,$FFF0,$0000,$0000
+ FDB $FFFF,$FFFF,$0000,$0000
+ FDB $FFFF,$FFFF,$0000,$0000
+ FDB $FFFF,$FF00,$0000,$0000
+ FDB $FF0F,$FFF0,$0000,$0000
+ FDB $F00F,$FFF0,$0000,$0000
+ FDB $0000,$FFFF,$0000,$0000
+ FDB $0000,$FFFF,$0000,$0000
+ FDB $0000,$0FFF,$0000,$0000
+
+XHAIR2
+XHAIR  FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   255,255,255,255,240,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,240,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+
+XHOUT2
+XHOUT  FCB   0,0,0,0,0,0,0,0
+       FCB   0,15,255,0,0,0,0,0
+       FCB   0,15,255,0,0,0,0,0
+       FCB   0,15,255,0,0,0,0,0
+       FCB   255,255,255,255,240,0,0,0
+       FCB   255,255,255,255,240,0,0,0
+       FCB   255,255,255,255,240,0,0,0
+       FCB   0,15,255,0,0,0,0,0
+       FCB   0,15,255,0,0,0,0,0
+       FCB   0,15,255,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+       FCB   0,0,0,0,0,0,0,0
+
+SITHK  FDB   RTS
+
+
+HND1
+HND2
+ FDB $0000,$0000,$0000,$0000
+ FDB $0000,$0FFF,$FF00,$0000
+ FDB $000F,$F0F0,$F0F0,$0000
+ FDB $00F0,$F0F0,$F0F0,$F000
+ FDB $00F0,$F0F0,$F0FF,$0F00
+ FDB $00F0,$F000,$00F0,$0F00
+ FDB $00F0,$0000,$0000,$F000
+ FDB $000F,$F000,$000F,$0000
+ FDB $0000,$0F00,$00F0,$0000
+ FDB $0000,$0F00,$00F0,$0000
+ FDB 0,0,0,0,0,0,0,0
+ FDB 0,0,0,0
+ FDB 0,0,0,0
+HNDOU1
+HNDOU2
+ FDB $0000,$0FFF,$FF00,$0000
+ FDB $000F,$FFFF,$FFFF,$0000
+ FDB $00FF,$FFFF,$FFFF,$F000
+ FDB $0FFF,$FFFF,$FFFF,$FF00
+ FDB $0FFF,$FFFF,$FFFF,$FFF0
+ FDB $0FFF,$FFFF,$FFFF,$FFF0
+ FDB $0FFF,$FFFF,$FFFF,$FF00
+ FDB $00FF,$FFFF,$FFFF,$F000
+ FDB $000F,$FFFF,$FFFF,$0000
+ FDB $0000,$FFFF,$FFFF,$0000
+ FDB 0,0,0,0
+ FDB 0,0,0,0
+ FDB 0,0,0,0
+ FDB 0,0,0,0
+
+LDRW   FCB   0
+
+* THESE ROUTINES SEE IF
+* THE ARROW IS OR IS NOT
+* CURRENTLY INSIDE OF THE
+* EDIT BOX OR LASSO
+ISOVL  PSHS  X,D,Y,U
+       JSR   ISOVL2
+       BRA   ISLSO2
+ISLSO  PSHS  X,D,Y,U
+       JSR   [$600A]
+       STA   MARK9
+ISLSO2 TSTA
+       BEQ   Y@
+       LDU   #ARROW
+       STU   USESYM
+       LDU   #ARR2
+       STU   USESY2
+       LDU   #AROUT
+       STU   USEOUT
+       LDU   #AROU2
+       STU   USEOU2
+       PULS  X,D,Y,U,PC
+Y@     LDU   #XHAIR
+       STU   USESYM
+       LDU   #XHAIR2
+       STU   USESY2
+       LDU   #XHOUT
+       STU   USEOUT
+       LDU   #XHOUT2
+       STU   USEOU2
+       PULS  X,D,Y,U,PC
+MARK9  RMB   1
+
+SECRT
+DODIA  CLRA
+       LDB   #2
+       JSR   PCOPY
+
+       LDA   #2
+       JSR   PAGEIN
+       JSR   DIALOG
+       FCC   "Color Max Deluxe",13
+       FCC   "Written for the sole reason",13
+       FCC   "of making money.",13
+       FCC   " ",13
+       FCB   0
+
+       LDA   #2
+       JSR   VIEW
+A@     LDA   $FF00
+       LSRA
+       BCS   A@
+       JSR   WTBUT
+       CLRA
+       JSR   PAGEIN
+       CLRA
+       JSR   VIEW
+       JMP   MENU
+
+PLNARW PSHS  X,D
+       LDX   <OH1
+       LDA   <DEFLSO
+       PSHS  X,A
+       LDD   #0
+       STD   <OH1
+       STA   <DEFLSO
+       JSR   MVEARW
+       PULS  X,A
+       STX   <OH1
+       STA   <DEFLSO
+       PULS  X,D,PC
+
+M33E8  FCB   0
+M33E9  FDB   0
+M33EB  FDB   100
+M33ED  FCB   0
+
+CYCSAV PSHS  D,X,Y,U
+       LDX   #CYCMRK
+       JSR   TOGCHK
+       COM   CYCFLG
+       LDX   #$FFB0
+       LDU   #CYCPAL
+       LDB   #16
+       TST   CYCFLG
+       BNE   A@
+       EXG   X,U
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+       JSR   CYCINC
+       PULS  A,B,X,Y,U,PC
+
+M3414  FCB   0
+
+CYCINC LDD   CYCLO
+       CMPD  CYCHI
+       BHS   A@
+       RTS
+A@     CLR   VCYC
+       RTS
+
+       END

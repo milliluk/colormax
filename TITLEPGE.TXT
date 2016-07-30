@@ -1,0 +1,69 @@
+       NAM   LOAD
+
+* SLOPPY LOAD CMD FOR THE
+* TITLE PAGE
+LOAD
+       JSR   OPENI2
+       JSR   GETBYT
+       LDX   #$FFB0
+       LDB   #16
+A@     JSR   GETBYT
+       STA   ,X+
+       DECB
+       BNE   A@
+       CLR   $FF9A
+       JSR   GETBYT colors 0=RGBA, NZ=Composite
+
+       CMPA  RGBFLG
+       BEQ   Z@
+       LDX   #RGBCMP
+       TSTA
+       BEQ   A@
+       LDX   #CMPRGB
+A@     LDU   #$FFB0
+       LDB   #16
+B@     LDA   ,U
+       ANDA  #63
+       LDA   A,X
+       STA   ,U+
+       DECB
+       BNE   B@
+Z@
+
+       JSR   GETBYT compression??? 0=nope!  NZ=yep!
+       STA   COMFL2
+
+       LDB   #32
+A@     JSR   GETBYT
+       DECB
+       BNE   A@
+
+       TST   COMFL2
+       BNE   LDNCP
+
+       LDX   #$8000
+A@     JSR   GETBYT
+       TSTA
+       BEQ   B@
+       TFR   A,B
+       JSR   GETBYT
+C@     STA   ,X+
+       DECB
+       BNE   C@
+       BRA   A@
+B@     JMP   AFTLD
+
+LDNCP  LDY   #160*200
+       LDX   #$8000
+A@     JSR   GETBYT
+       STA   ,X+
+       LEAY  -1,Y
+       BNE   A@
+
+AFTLD  JMP   CLOSE2
+
+COMFL2 FCB   0
+
+       END
+
+

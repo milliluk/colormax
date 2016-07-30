@@ -1,0 +1,230 @@
+       NAM   RAMDISK
+
+       ORG   $D800
+
+INIT   JSR   $A928
+       JSR   PRINT
+       FCC   /HARD DRIVE DISK CACHE/,13,13
+       FCC   /ON FLOPPIES, EXEC:/,13
+       FCC   /&HDF10 WHEN CHANGING #1/,13
+       FCC   /&HDF20 WHEN CHANGING #2/,13,13
+       FCC   /DRIVE #1 TO CACHE:/,0
+       JSR   GETKEY
+       SUBA  #'0
+       STA   DRIVE1
+       JSR   PRINT
+       FCB 13
+       FCC   /DRIVE #2 TO CACHE:/,0
+       JSR   GETKEY
+       SUBA  #'0
+       STA   DRIVE2
+
+       LDA   #$7E
+       STA   $D66C
+       LDX   #GO
+       STX   $D66D
+
+       JSR   $DF10
+       JMP   $DF20
+
+DRIVE1 FCB   0
+DRIVE2 FCB   0
+
+GETKEY SYNC
+       SYNC
+       COM   [$88]
+       JSR   [$A000]
+       BEQ   GETKEY
+       LDB   #96
+       STB   [$88]
+       JMP   [$A002]
+
+PRINT  PULS  X
+A@     LDA   ,X+
+       BEQ   B@
+       JSR   [$A002]
+       BRA   A@
+B@     TFR   X,PC
+
+* THIS ROUTINE IS CALLED
+* ON EVERY DSKCON
+
+GO     PSHS  A
+       LDA   <$EA COMMAND
+       BEQ   Z@
+       LDA   <$EB
+       CMPA  DRIVE1
+       BEQ   GO2
+       CMPA  DRIVE2
+       BEQ   GO2
+Z@     PULS  A
+
+DSKCON FCB   $34,$76,$86,$05
+       JMP   $D670
+
+* THIS ROUTINE IS CALLED
+* WHENEVER THERE IS A READ
+* TO EITHER OF THE CACHED
+* DRIVES
+
+GO2    PULS  A
+       PSHS  D,X,Y,U
+       ORCC  #$50
+
+       LDX   #INMEM1
+       LDA   <$EB
+       CMPA  DRIVE2
+       BNE   A@
+       LDX   #INMEM2
+A@     STX   INMEM
+
+       LDA   <$EA
+       CMPA  #3
+       LBEQ  GO3
+
+* READ *
+
+* SEE IF THE SECTOR IS
+* ALREADY IN RAM:
+       CLRA
+       LDB   <$ED
+       DECB
+       PSHS  D
+       LDA   <$EC
+       LDB   #18
+       MUL
+       ADDD  ,S++
+       ADDD  INMEM
+       TFR   D,X
+       LDA   ,X
+       BEQ   GO3    IF NOT
+
+       JSR   CALC   GET LOC.
+       JSR   MOVEXU COPY TO BUF
+       JMP   DONE
+
+* THIS ROUTINE IS USED FOR
+* BOTH READ AND WRITE
+*
+* ON ANY WRITE, THE BUFFER
+* IS WRITTEN TO DISK, COPIED
+* TO RAM, AND MARKED USED.
+*
+* ON A READ, THE SECTOR IS READ,
+* COPIED TO RAM, AND MARKED USED
+
+GO3    JSR   DSKCON  PERFORM
+*                    READ/WRITE
+       LDA   <$F0
+       BEQ   A@
+       PULS  D,X,Y,U
+       JMP   $D60A
+A@     ORCC  #$50
+
+       JSR   CALC
+       EXG   X,U
+       JSR   MOVEXU  COPY TO RAM
+
+       CLRA
+       LDB   <$ED
+       DECB
+       PSHS  D
+       LDA   <$EC
+       LDB   #18
+       MUL
+       ADDD  ,S++
+       ADDD  INMEM
+       TFR   D,X
+       LDA   #$FF
+       STA   ,X
+
+       JMP   DONE
+
+* CALCULATES THE MEMORY LOCATION
+* OF A SECTOR.
+* RETURNS:
+* X=ADDRESS
+* U=DSKCON POINTER
+
+CALC   LDY   $FFA4
+
+       CLRA
+       LDB   <$EB
+       CMPB  DRIVE2
+       BNE   A@
+       LDA   #20
+A@
+
+       LDX   #0
+       LDB   <$EC
+       BEQ   C@
+A@     LEAX  18*256,X
+       CMPX  #8192
+       BLO   B@
+       LEAX  -8192,X
+       INCA
+B@     DECB
+       BNE   A@
+C@     STA   $FFA4
+       INCA
+       STA   $FFA5
+
+       LDA   <$ED
+       DECA
+       CLRB
+       LEAX  D,X
+       LEAX  $8000,X
+
+       LDU   <$EE
+       RTS
+
+* COPY 256 BYTES FROM X TO U
+MOVEXU LDA   #32
+       PSHS  A
+A@     LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       LDD   ,X++
+       STD   ,U++
+       DEC   ,S
+       BNE   A@
+
+       STY   $FFA4
+       CLR   <$F0
+       PULS  A,PC
+
+DONE   ANDCC #$AF
+       PULS  D,X,Y,U,PC
+
+INMEM  FDB   0  POINTER TO TABLE
+INMEM1 BSZ   18*35
+INMEM2 BSZ   18*35
+
+       MSG   "END1:",*
+       MSG   "<$DF00"
+
+       ORG   $DF10
+
+       LDX   #INMEM1
+       BRA   ERASE
+
+       ORG   $DF20
+
+       LDX   #INMEM2
+ERASE  LDA   #18*35/7
+A@     CLR   ,X+
+       CLR   ,X+
+       CLR   ,X+
+       CLR   ,X+
+       CLR   ,X+
+       CLR   ,X+
+       CLR   ,X+
+       DECA
+       BNE   A@
+
+       RTS
+
+       END   $D800

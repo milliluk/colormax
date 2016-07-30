@@ -1,0 +1,649 @@
+       NAM   LDGIF
+
+LDGIF  LDX   #0
+       STX   COLUMN
+       CLR   PD1
+       CLR   GLS
+       CLR   PASS
+       LDA   #'\
+       STA   [CYCMRK]
+       CLR   [VCYC]
+       CLR   [CYCFLG]
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCB   32,13
+       FCC   "Decompressing GIF data",13
+       FCB   32,13
+       FCB   0
+       CLR   AFRM
+       LDX   #$8000
+       STX   ALOC
+       JSR   [GETBYT]
+       CMPA  #'G
+       LBNE  GERR
+       JSR   [GETBYT]
+       CMPA  #'I
+       LBNE  GERR
+       JSR   [GETBYT]
+       CMPA  #'F
+       LBNE  GERR
+       JSR   [GETBYT]  '8
+       JSR   [GETBYT]  '7
+       JSR   [GETBYT]  'a
+       JSR   GETB16
+       CMPD  #320
+       LBNE  GRES
+
+       JSR   GETB16
+       STD   GHGT
+       CMPD  #200
+       LBHI  GRES
+
+       JSR   [GETBYT]
+       STA   GOPT
+       ANDA  #7
+       INCA
+       STA   BPPX
+       CMPA  #4
+       LBHI  GPL
+
+       JSR   [GETBYT]
+       JSR   [GETBYT]
+
+       LDA   GOPT
+       LSLA
+       BCC   T@
+       JSR   GETPAL
+T@
+
+       JSR   [GETBYT]
+       CMPA  #',
+       LBNE  GERR2
+
+       JSR   GETB16
+       CMPD  #0
+       LBNE  GFFRM2
+
+       JSR   GETB16
+       CMPD  #0
+       LBNE  GFFRM2
+
+       JSR   GETB16
+       CMPD  #320
+       LBHI  GRES
+       LBNE  GFFRM2
+
+       JSR   GETB16
+       STD   IMGHGT
+
+       JSR   [GETBYT]
+       STA   IOPT
+       TFR   A,B
+       ANDA  #7
+       INCA
+       CMPA  #4
+       LBHI  GRES
+       LSLB
+       BCC   A@
+       JSR   GETPAL
+A@
+
+       LDA   IOPT
+       ANDA  #64
+       STA   INTRLC
+
+
+       JSR   INISTR
+
+
+*DECODE THE LZW*
+       JSR   [GETBYT]
+       INCA
+       STA   CURCDE
+       STA   CWDT
+
+       DECA
+       LSLA
+       LDX   #BITS
+       LDX   A,X
+       STX   GCC
+       INX
+       STX   GEOI
+
+       LDA   #$FF
+       STA   ROTCDE
+
+       JSR   [GETBYT]
+       STA   BLKLNG
+
+RSTRT
+P@     JSR   GETCDE
+       STD   OLD
+       CMPD  GEOI
+       LBEQ  ENDLG
+       CMPD  GCC
+       BNE   K@
+       JSR   INISTR
+       BRA   P@
+K@
+       CLR   PDNT
+       JSR   GETSTR
+
+A@     JSR   GETCDE
+       STD   CODE
+       CMPD  GEOI
+       LBEQ  ENDLG
+       CMPD  GCC
+       BNE   K@
+       JSR   INISTR
+       BRA   RSTRT
+K@     CMPD  LSTG
+       BHS   B@
+       CLR   PDNT
+       JSR   GETSTR
+       LDD   OLD
+       STD   C
+       LDA   FIRST
+       STA   K
+       JSR   ADDIT
+       JSR   IS11
+       LDD   CODE
+       STD   OLD
+       BRA   A@
+B@     LDA   #255
+       STA   PDNT
+       LDD   OLD
+       JSR   GETSTR
+       CLR   PDNT
+       LDA   FIRST
+       STA   K
+       LDD   OLD
+       STD   C
+       JSR   ADDIT
+       JSR   IS11
+       LDD   LSTG
+       SUBD  #1
+       JSR   GETSTR
+       LDD   CODE
+       STD   OLD
+       BRA   A@
+
+IS11   PSHS  X
+       LDX   LSTG
+       DEX
+       CMPX  WHNBAD
+       BNE   Z@
+       JSR   UPIZ
+Z@     PULS  X,PC
+
+
+
+OLD    RMB   2
+CODE   RMB   2
+
+GETPAL LDX   #BITS
+       LDA   BPPX
+       LSLA
+       LDY   A,X
+       LDU   #$FFB0
+A@     JSR   [GETBYT]
+       STA   GRED
+       JSR   [GETBYT]
+       STA   GGREEN
+       JSR   [GETBYT]
+       STA   GBLUE
+       JSR   GIFCC3
+       STA   ,U+
+       LEAY  -1,Y
+       BNE   A@
+       LDA   $FFBF
+       STA   $FF9A
+       RTS
+
+ENDLG  LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JSR   [CLOSE]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+
+       LDY   TITLE
+       LDX   #A@
+       LDB   #12
+B@     LDA   ,X+
+       STA   ,Y+
+       DECB
+       BNE   B@
+       JSR   [SHOTIT]
+       JMP   [MENU]
+A@     FCC   "GIF picture",0
+
+
+GCDE   RMB   1
+
+GHGT   RMB   2
+BPPX   RMB   1
+INTRLC FCB   0
+
+GPL    LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCC   " ",13
+       FCC   "This GIF file is made up",13
+       FCC   "of too many color planes",13,32,13,0
+       JMP   BUZZ
+
+
+GRES   LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCC   " ",13
+       FCC   "This GIF file is of an",13
+       FCC   "incompatible resolution with",13
+       FCC   "Color Max Deluxe",13
+       FCC   " ",13
+       FCB   0
+
+BUZZ
+A@     LDA   $FF00
+       LSRA
+       BCS   A@
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JSR   [CLOSE]
+       JMP   [MENU]
+
+
+GERR2  LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCB   32,13
+       FCC   "GIF file ERROR",13
+       FCB   32,13,0
+       JMP   BUZZ
+
+
+
+
+GFFRM2 LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCB   32,13
+       FCC   "Color Max Deluxe does not support",13
+       FCC   "partial size GIF files",13
+       FCB   32,13,0
+       JMP   BUZZ
+
+
+GFFRM  LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       CLRA
+       JSR   [VIEW]
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCB   32,13
+       FCC   "Color Max Deluxe does not",13
+       FCC   "support multiple image GIF",13
+       FCC   "files",13
+       FCB   32,13,0
+       JMP   BUZZ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GERR   CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   [DIALOG]
+       FCB   32,13
+       FCC   "Not a GIF file!!",13
+       FCB   32,13
+       FCB   0
+       JMP   BUZZ
+
+
+GETB16 JSR   [GETBYT]
+       PSHS  A
+       JSR   [GETBYT]
+       PULS  B,PC
+
+GOPT   RMB   1
+
+*GETSTR*
+* Finds the string for D and
+* dumps it to the CHARSTREAM
+GETSTR JSR   PAGSTR
+       PSHS  D
+       ADDD  ,S
+       ADDD  ,S++
+       ADDD  #$8000
+       TFR   D,X
+       STX   ENDX
+       LDA   #255
+       STA   ENDX2
+A@     LDD   ,X
+       CMPD  #$FFFF
+       BEQ   R@
+       PSHS  D
+       ADDD  ,S
+       ADDD  ,S++
+       ADDD  #$8000
+       PSHS  X
+       TFR   D,X
+       BRA   A@
+R@     LDA   2,X
+       TST   PDNT
+       BNE   Y@
+       JSR   CRSTRM
+Y@     TST   ENDX2
+       BEQ   T@
+       CLR   ENDX2
+       STA   FIRST
+T@     CMPX  ENDX
+       BEQ   S@
+       PULS  X
+       BRA   R@
+S@     JSR   PAGPIX
+       RTS
+
+PDNT   FCB   0
+
+FIRST  FCB   0
+ENDX   FDB   0
+ENDX2  FCB   0
+
+
+*GETCDE*
+*
+* Gets a CODE from the GIF file*
+* Enter: Make sure that CURCDE has the correct value!
+* Exit : Code is in D
+GETCDE LDD   #0
+       PSHS  D
+       LDB   CWDT
+A@     BSR   ROT1
+       ROR   ,S
+       ROR   1,S
+       DECB
+       BNE   A@
+
+*now, force it right-justified*
+
+       LDB   CWDT
+       PSHS  B
+       LDD   #0
+A@     LSL   2,S
+       ROL   1,S
+       ROLB
+       ROLA
+       DEC   ,S
+       BNE   A@
+       LEAS  3,S
+       RTS
+
+*ROT1*
+*
+* Rotates one bit out of the
+* compressed code-stream
+* EXIT: the bit is in the CARRY
+ROT1   PSHS  B
+       LDB   ROTCDE
+       CMPB  #$FF
+       BNE   A@
+       LDA   #8
+       STA   ROTCDE
+       JSR   GETBX
+       STA   INBYT
+A@     LSR   INBYT
+       PSHS  CC
+       DEC   ROTCDE
+       BNE   B@
+       LDA   #8
+       STA   ROTCDE
+       JSR   GETBX
+       STA   INBYT
+B@     PULS  CC
+       PULS  B,PC
+
+INBYT  FCB   0
+
+T@     FCB   0
+J@     LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   T@
+       PULS  X,D,U,PC
+AFRM   FCB   0
+ALOC   FDB   $8000
+CRSTRM TST   INTRLC
+       LBNE  CRI
+CRENT
+       PSHS  X,D,U
+       LDB   #255
+       STB   PD1
+       LDX   COLUMN
+       INX
+       CMPX  #320
+       BNE   W@
+       LDX   #0
+W@     STX   COLUMN
+       COM   AFRM
+       BNE   J@
+       ORA   T@
+       LDX   $FFA4
+       LDU   $FFA6
+       PSHS  X,U
+       LDX   #$3031
+       LDU   #$3233
+       STU   $FFA6
+       STX   $FFA4
+       LDX   ALOC
+       STA   ,X+
+       STX   ALOC
+       PULS  X,U
+       STX   $FFA4
+       STU   $FFA6
+       PULS  X,D,U,PC
+
+PD1    FCB   0
+PASS   FCB   0
+COLUMN FDB   0
+CRI    PSHS  X
+       LDX   COLUMN
+       PULS  X
+       BNE   CRENT
+       TST   PD1
+       LBEQ  CRENT
+       PSHS  X,D,Y,U
+
+       LDA   PASS
+       BNE   A@
+*PASS 1*
+       LDX   ALOC
+       LEAX  8*160-160,X
+       STX   ALOC
+       CMPX  #$8000
+       BLO   P@
+       CMPX  #32000+$8000
+       BLO   Z@
+P@     INC   PASS
+       LDX   #$8000+4*160
+       STX   ALOC
+       BRA   Z@
+A@     CMPA  #1
+       BNE   B@
+       LDX   ALOC
+       LEAX  8*160-160,X
+       STX   ALOC
+       CMPX  #$8000
+       BLO   Q@
+       CMPX  #32000+$8000
+       BLO   Z@
+Q@     INC   PASS
+       LDX   #$8000+2*160
+       STX   ALOC
+       BRA   Z@
+B@     CMPA  #2
+       BNE   C@
+       LDX   ALOC
+       LEAX  4*160-160,X
+       STX   ALOC
+       CMPX  #$8000
+       BLO   R@
+       CMPX  #32000+$8000
+       BLO   Z@
+R@     INC   PASS
+       LDX   #$8000+160
+       STX   ALOC
+       BRA   Z@
+C@     LDX   ALOC
+       LEAX  2*160-160,X
+       STX   ALOC
+Z@     PULS  X,D,Y,U
+       JMP   CRENT
+
+
+
+
+
+
+*GETBX*
+* Get's a byte from the disk
+* file, taking the GIF-block
+* format in to account
+* EXIT : A holds the byte
+
+GETBX  JSR   [GETBYT]
+       DEC   BLKLNG
+       BNE   ?RTS
+       PSHS  A
+       JSR   [GETBYT]
+       STA   BLKLNG
+       PULS  A,PC
+
+
+BLKLNG FCB   0
+
+
+
+
+GIFCC3 CLR   ,-S
+       LDA  GRED
+       ANDA  #128
+       LSRA  64
+       LSRA  32
+       ORA   ,S
+       STA   ,S
+
+       LDA  GRED
+       ANDA  #64
+       LSRA 32
+       LSRA 16
+       LSRA 8
+       LSRA 4
+       ORA   ,S
+       STA   ,S
+
+       LDA   GGREEN
+       ANDA  #128
+       LSRA  64
+       LSRA  32
+       LSRA  16
+       ORA   ,S
+       STA   ,S
+
+       LDA   GGREEN
+       ANDA  #64
+       LSRA 32
+       LSRA 16
+       LSRA 8
+       LSRA 4
+       LSRA 2
+       ORA   ,S
+       STA   ,S
+
+       LDA   GBLUE
+       ANDA  #128
+       LSRA 64
+       LSRA 32
+       LSRA 16
+       LSRA 8
+       ORA   ,S
+       STA   ,S
+
+       LDA   GBLUE
+       ANDA  #64
+       LSRA  32
+       LSRA  16
+       LSRA  8
+       LSRA  4
+       LSRA  2
+       LSRA  1
+       ORA   ,S
+       STA   ,S
+
+       PULS  A,PC
+ROTCDE FCB   0
+IMGHGT RMB   2
+IOPT   RMB   1
+
+CURCDE RMB   1
+
+
+
+GEOI   RMB   2
+GCC    RMB   2
+
+       END

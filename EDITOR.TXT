@@ -1,0 +1,637 @@
+       NAM   EDITOR
+
+* EDIT PATTERN;
+EDPT   CLR   EDFLG
+       LDA   PATTRN
+       CMPA  #16
+       LBLO  MENU
+       SUBA  #16
+       LDB   #32
+       MUL
+       ADDD  PATS
+       STD   EDITX
+       JSR   EDIT1
+       LDA   PATNUM
+       ANDA  #255-16
+       JSR   [DOPAT]
+       LDA   PATTRN
+       JSR   [SHOPAT]
+       LDA   #2
+       JSR   [PAGEIN]
+       LDA   PATNUM
+       ANDA  #255-16
+       JSR   [DOPAT]
+       LDA   PATTRN
+       JSR   [SHOPAT]
+       CLRA
+       JSR   [PAGEIN]
+       JMP   [MENU]
+
+* EDIT BRUSH;
+EDBR   LDA   #$FF
+       STA   EDFLG
+
+       LDX   USESYM
+       LDU   USESY2
+       LDY   USEOUT
+       LDD   USEOU2
+       PSHS  D,X,Y,U
+
+       LDA   BNUM
+       LDB   #32
+       MUL
+       ADDD  #BRSHS
+       STD   EDITX
+       JSR   EDIT1
+
+       PULS  D,X,Y,U
+       STX   USESYM
+       STU   USESY2
+       STY   USEOUT
+       STD   USEOU2
+
+       CMPX  SPCAN
+       BEQ   A@
+       JSR   SBRS2
+A@
+
+       JMP   [MENU]
+
+LEX    FDB   0
+LEY    FCB   0
+EDFLG  FCB   0    0=PATTERNS
+EDITX  FDB   0    AD OF DATA
+EDIT1  LDX   OH1
+       STX   THEOV
+       LDX   #0
+       STX   OH1
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+
+       LDX   EDITX
+       LDU   #EDBUF
+A@     LDD   ,X++
+       STD   ,U++
+       CMPU  #EDBUF+32
+       BNE   A@
+
+       LDX   #96
+       STX   <BH1
+       LDX   #256
+       STX   <BH2
+       LDA   #34
+       STA   <BV1
+       LDA   #146
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP
+       LDB   #15
+       JSR   [BOX]
+       CLRB
+       JSR   BUMP
+       JSR   [BOX]
+       JSR   BUMP
+       JSR   [BOX]
+
+       TST   EDFLG
+       BNE   A@
+* DRAW BIG BOX FOR PATTERN
+       LDA   #8+34
+       STA   <BV1
+       LDA   #8+34+64+2  146-8
+       STA   <BV2
+       LDX   #96+11
+       STX   <BH1
+       LDX   #96+11+65
+       STX   <BH2
+       JSR   [BOX]
+       JSR   SHADOW
+       BRA   B@
+* DRAW SMALL BOX FOR BRUSH
+A@     LDA   #7+34
+       STA   <BV1
+       LDA   #8+34+10
+       STA   <BV2
+       LDX   #96+10
+       STX   <BH1
+       LDX   #96+11+10
+       STX   <BH2
+       JSR   [BOX]
+       JSR   SHADOW
+* DRAW RIGHT BIG BOX
+B@     LDX   #96+11+64+10+1
+       STX   <BH1
+       LDX   #96+11+64+10+65+2
+       STX   <BH2
+       LDA   #8+34
+       STA   <BV1
+       LDA   #8+34+64+2
+       STA   <BV2
+       JSR   [BOX]
+       JSR   SHADOW
+* OK & CANCEL BOXES
+
+       LDD   #16*8
+       STD   <LPRTH
+       LDA   #16*8
+       STA   <LPRTV
+       LDA   #14
+       STA   [CURSRX]
+       LDA   #16
+       STA   [CURSRY]
+       JSR   BSBOX
+       LDX   #KST1
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #136
+       SUBD  ,S++
+       STD   <LPRTH
+       LDX   #KST1
+       JSR   KST3
+
+       LDA   #24
+       STA   [CURSRX]
+       LDX   #KST2
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #216
+       SUBD  ,S++
+       STD   <LPRTH
+       JSR   BSBOX
+       LDX   #KST2
+       JSR   KST3
+
+* DRAW THE INITIAL DATA ON
+* THE SCREEN FROM EDITX POINTER
+* TO THE EDITED DATA.
+
+       CLR   EXPOS
+       CLR   EYPOS
+       LDX   EDITX
+       LDA   #8
+       PSHS  A
+A@     LDA   #4
+       PSHS  A
+B@     LDB   ,X
+       LSRB
+       LSRB
+       LSRB
+       LSRB
+       JSR   EDSET2
+       INC   EXPOS
+       LDB   ,X+
+       ANDB  #$0F
+       JSR   EDSET2
+       INC   EXPOS
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       CLR   EXPOS
+       INC   EYPOS
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+* SHOW PATTERN/BRUSH IN BOX
+       JSR   EDSHW
+
+       CLRA
+       JSR   [VIEW]
+
+       LDX   USESYM
+       LDU   USESY2
+       PSHS  X,U
+       LDX   USEOUT
+       LDU   USEOU2
+       PSHS  X,U
+       LDX   ARROW
+       STX   USESYM
+       LDX   ARR2
+       STX   USESY2
+       LDX   AROUT
+       STX   USEOUT
+       LDX   AROU2
+       STX   USEOU2
+       JSR   [DRWARW]
+       LDA   #$FF
+       STA   CHKCLR
+
+* MAIN EDITOR LOOP *
+EDIT2  JSR   [JOYSTK]
+
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <AY
+       BNE   A@
+       LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       LDA   #$FF
+       STA   CHKCLR
+       BRA   EDIT2
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       JSR   [DRWARW]
+
+       LDA   $FF00
+       ANDA  #1
+       BNE   EDIT2
+
+       LDX   <AX
+       CMPX  #96+11
+       LBLO  EDIT8
+       CMPX  #184+64+10
+       LBHI  EDIT8
+       LDA   <AY
+       CMPA  #8+34
+       LBLO  EDIT8
+       CMPA  #8+34+64
+       LBHI  EDIT8
+
+* "FATBITS" START AT
+* 184, 44 .. 8 X 8 EACH
+
+       CMPA  #44
+       LBLO  EDIT2
+       CMPA  #44+63
+       LBHI  EDIT2
+       LDX   <AX
+       CMPX  #184
+       LBLO  EDIT2
+       CMPX  #184+63
+       LBHI  EDIT2
+
+       LDA   <AY
+       SUBA  #44
+       LSRA
+       LSRA
+       LSRA
+       STA   EYPOS
+       LDD   <AX
+       SUBD  #184
+       LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       STB   EXPOS
+
+       JSR   [RPLARW]
+
+       TST   CHKCLR
+       BEQ   C@
+       CLR   CHKCLR
+       JSR   EDPP
+       CMPB  COLOR
+       BEQ   A@
+       LDB   COLOR
+       BRA   B@
+A@     LDB   ERCOLR
+B@     STB   PCOLR
+       BRA   D@
+C@     JSR   EDPP  CHECK COLOR
+       CMPB  PCOLR THE SAME?
+       BEQ   E@   THEN SKIP
+       LDB   PCOLR OTHERWISE
+D@     JSR   EDSET  SET POINT
+       JSR   EDSHW UPDATE WINDOW
+E@     JSR   [DRWARW] REDO ARROW
+       JMP   EDIT2  & LOOP!
+
+EDIT8  LDD   <AX
+       CMPD  #83
+       BLO   EDIT9
+       CMPD  #305
+       BHI   EDIT9
+       LDA   <AY
+       CMPA  #162
+       BLO   EDIT9
+       CMPA  #172
+       BHI   EDIT9
+       LDD   <AX
+       SUBD  #82
+       LDY   #0
+A@     CMPD  #14
+       BLO   B@
+       LEAY  1,Y
+       SUBD  #14
+       BRA   A@
+B@     TFR   Y,D
+
+       STB   COLOR
+       STB   PATTRN
+       TFR   B,A
+       JSR   [SHOPAT]
+       LDA   #2
+       JSR   [PAGEIN]
+       LDA   COLOR
+       JSR   [SHOPAT]
+       CLRA
+       JSR   [PAGEIN]
+
+       JMP   EDIT2
+
+* OK & CANCEL BOX CHECK;
+EDIT9  LDA   <AY
+       CMPA  #16*8-2
+       LBLO  EDIT2
+       CMPA  #16*8+10
+       LBHI  EDIT2
+       LDX   <AX
+       CMPX  #14*8-2
+       LBLO  EDIT2
+       CMPX  #20*8+2
+       BLO   A@
+       CMPX  #24*8-2
+       LBLO  EDIT2
+       CMPX  #32*8+2
+       BLO   B@
+       JMP   EDIT2
+* CANCEL; FALL THRU TO "OK"
+B@     LDX   #EDBUF
+       LDU   EDITX
+C@     LDD   ,X++
+       STD   ,U++
+       CMPX  #EDBUF+32
+       BNE   C@
+* OK
+A@     LDX   THEOV
+       STX   OH1
+       PULS  X,U
+       STX   USEOUT
+       STU   USEOU2
+       PULS  X,U
+       STX   USESYM
+       STU   USESY2
+       LDA   #2
+       CLRB
+       JMP   [PCOPY]
+
+* PPOINT ROUTINE FOR
+* EXPOS, EYPOS
+EDPP   LDA   EXPOS
+       LDB   #8
+       MUL
+       ADDD  #186
+       STD   <PH1
+       LDA   EYPOS
+       LDB   #8
+       MUL
+       ADDB  #46
+       STB   <PV1
+       JMP   [PPOINT]
+
+EXPOS  FCB   0  (0-7)
+EYPOS  FCB   0  (0-7)
+* SET PIXEL (8 X 8 BLOCK)
+* IN EXPOS, EYPOS;
+* COLOR IN B
+* ALSO CHANGES THE DATA
+* IN "EDITX"
+EDSET2 TST   EDFLG
+       BEQ   EDSET
+       PSHS  B
+       LDB   #15
+       SUBB  ,S+ INVERT IF BRUSH
+       PSHS  X,D,U
+       PSHS  B
+       JMP   EDSET3
+
+EDSET  PSHS  X,D,U
+       PSHS  B
+
+** SET THE PIXEL @ EDITX
+       LDX   EDITX
+       LDA   EYPOS
+       BEQ   B@
+A@     LEAX  4,X
+       DECA
+       BNE   A@
+B@
+
+       LDA   EXPOS
+A@     CMPA  #2
+       BLO   B@
+       INX
+       SUBA  #2
+       BRA   A@
+B@
+
+       TST   EDFLG
+       BEQ   A@
+       LDB   #15
+       SUBB  ,S
+       STB   ,S
+A@
+
+       TSTA
+       BEQ   A@
+       LDA   ,X
+       ANDA  #$F0
+       ORA   ,S
+       BRA   B@
+A@     LDA   ,X
+       ANDA  #$0F
+       LDB   ,S
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       PSHS  B
+       ORA   ,S+
+B@     STA   ,X
+
+       TST   EDFLG
+       BEQ   A@
+       LDB   #15
+       SUBB  ,S
+       STB   ,S
+A@
+
+** SET THE PIXEL @ SCREEN:
+
+EDSET3 LDX   #$8000+92+44*160
+       LDA   EYPOS
+       BEQ   B@
+A@     LEAX  160*8,X
+       DECA
+       BNE   A@
+B@     LDB   EXPOS
+       LSLB
+       LSLB
+       ABX
+
+       PULS  A
+       LDU   #BSTBLX
+       LSLA
+       LDD   A,U
+
+       BSR   A@
+       LEAX  2,X
+       ORB   #$0F
+       BSR   A@
+       PULS  X,D,U,PC
+*
+A@     STD   ,X
+       STD   160,X
+       STD   160*2,X
+       STD   160*3,X
+       STD   160*4,X
+       STD   160*5,X
+       STD   160*6,X
+       RTS
+
+* IF A CANCEL IS DONE, THE
+* ORIGINAL DATA IS IN EDBUF
+EDBUF  RMB   32
+
+* EDSHW
+* THIS ROUTINE SHOWS THE
+* PATTERN AS AN ENLARGED BLOCK
+* AT THE LEFT, OR THE BRUSH AS
+* A CUTE LITTLE BRUSH
+EDSHW  TST   EDFLG
+       BEQ   EDSHW2  IF PATTRN
+
+* DRAW BRUSH
+       LDX   EDITX
+       LDU   #$8000+43*160+54
+       LDB   #8
+       PSHS  B
+A@     LDD   ,X++
+       COMA
+       COMB
+       STD   ,U
+       LDD   ,X++
+       COMA
+       COMB
+       STD   2,U
+       LEAU  160,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+EDSHW2 LDU   #$8000+43*160+54
+
+       LDB   #8
+       PSHS  B
+A@     LDX   EDITX
+       LDB   #8
+       PSHS  B
+B@     PSHS  U
+       LDB   #4
+       PSHS  B
+C@     LDD   ,X
+       STD   ,U
+       STD   4,U
+       LDD   2,X
+       STD   2,U
+       STD   6,U
+       LEAU  8,U
+       DEC   ,S
+       BNE   C@
+       LEAS  1,S
+       PULS  U
+       LEAU  160,U
+       LEAX  4,X
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       DEC   ,S
+       BNE   A@
+
+       LDX   EDITX
+       LDB   #4
+       PSHS  B
+A@     LDD   ,X
+       STD   ,U
+       STD   4,U
+       LDD   2,X
+       STD   2,U
+       STD   6,U
+       LEAU  8,U
+       DEC   ,S
+       BNE   A@
+
+       LEAS  2,S
+
+       RTS
+
+CHKCLR FCB   0
+* SETUP CURSRX,Y - AND JSR BSBOX
+* IT WILL DRAW A PROPERLY
+* SIZED AND SHADOWED BOX FOR
+* A CANCEL OR OK BOX
+BSBOX  LDA   [CURSRX]
+       LDB   #8
+       MUL
+       SUBD  #6
+       STD   <BH1
+       ADDD  #56
+       STD   <BH2
+       LDA   [CURSRY]
+       LDB   #8
+       MUL
+       SUBB  #2
+       STB   <BV1
+       ADDB  #10
+       STB   <BV2
+       CLRB
+       JSR   [BOX]
+
+* SHADOW ... SETUP BH1,2 BV1,2
+* JSR [BOX] AND THEN JSR SHADOW
+* IT WILL MAKE THE PROPER SHADOW
+* FOR THE BOX
+SHADOW LDX   BH1
+       LEAX  2,X
+       STX   <LH1
+       LDX   BH2
+       LEAX  1,X
+       STX   <LH2
+       LDA   <BV2
+       INCA
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+       LDA   <BV1
+       INCA
+       INCA
+       STA   <LV1
+       LDX   <BH2
+       INX
+       STX   <LH1
+       STX   <LH2
+       JMP   [LINE]
+
+BSTBLX FDB   $0,$1111,$2222,$3333,$4444,$5555,$6666,$7777,$8888,$9999,$AAAA,$BBBB,$CCCC,$DDDD,$EEEE,$FFFF
+
+KST1   FCC   "OK",0
+KST2   FCC   "CANCEL",0
+
+KST3   LDA   ,X+
+       BEQ   ?RTS
+       JSR   [LYNPRT]
+       BRA   KST3
+
+       END

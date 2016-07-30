@@ -1,0 +1,281 @@
+       NAM   QUICKPRT
+*MADE SPECIFICALLY FOR THE
+*LYNCHBRG SET!!!*
+*ENTER W/:
+* A=THE ASCII CHARACTER
+* <LPRTH> - 0-319 PRINT POS
+* <LPRTV> - 0-191 PRINT POS
+* Prints in BLACK.  No options.
+* have the page to be printed on, paged in when this routine
+* is called.
+
+OLSTCK RMB   2
+XGH    FCB   0
+XGV    FCB   0
+LYNPRT
+PRTLYN STS   OLSTCK
+       LDS   #$5FFE
+       PSHS  X,D,Y,U
+       LDB   SQUIGL
+       COMB
+       STB   XGH
+       LDB   #%11110000
+       STB   XGV
+       SUBA  #32
+       LBMI  LZIP
+       CLRB
+       EXG   A,B
+       LSLB
+       ROLA
+       LSLB
+       ROLA
+       ADDD  #$8000
+       TFR   D,X
+       LDB   $FFA4
+       LDA   #$28
+       STA   $FFA4
+       LDA   ,X+ *WIDTH*
+       PSHS  A
+       LDA   ,X+ *WDT8*
+       LDU   ,X *LOC OF CHR*
+       STB   $FFA4
+       PSHS  A
+       LDA   <LPRTV
+       LDB   #160
+       MUL
+       ADDD  #$8000
+       TFR   D,X
+       LDD   <LPRTH
+       LSRA
+       RORB
+       ABX
+*X=DUMP ADDRESS*
+       LDB   #$28
+A@     CMPU  #8192
+       BLO   B@
+       LEAU  -8192,U
+       INCB
+       BRA   A@
+B@
+
+
+       LDA   <LPRTH+1
+       STB   $FFA0
+       INCB
+       STB   $FFA1
+
+*U=MEM ADDRESS FOR FONT*
+*X=MEM ADDRESS FOR DESTINATION*
+*1,S=WIDTH, IN PIXELS*
+*,S=WIDTH, IN BYTES (4BPP)
+
+       LSRA
+       BCC   NORT
+*ROTATE IT ONCE RIGHT*
+       LDB   #10 *ROWS*
+       PSHS  B
+A@     TFR   X,Y
+       LDA   1,S
+       PSHS  A *WIDTH*
+B@     LDA   ,U+
+       BNE   C@
+       LDD   #%1111000000001111
+       BRA   F@
+C@     TSTA
+       BMI   D@
+       LDD   #%1111000011111111
+       BRA   F@
+D@     CMPA  #255
+       BNE   E@
+       TFR   A,B
+       BRA   F@
+E@     LDD   #%1111111100001111
+F@
+       ANDA  ,X
+       ANDB  1,X
+       TST   XGH
+       BEQ   T@
+       ORA   XGV
+       ORB   XGV
+T@     STD   ,X+
+       DEC   ,S
+       BNE   B@
+       TFR   Y,X
+       COM   XGV
+       LEAX  160,X
+       LEAS  1,S
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+LZX    CLRA
+       LEAS  1,S
+       LDX   #$3839
+       STX   $FFA0
+       LDB   ,S+
+       INCB
+       ADDD  <LPRTH
+       STD   <LPRTH
+LZIP
+       PULS  X,D,Y,U
+       LDS   OLSTCK
+       RTS
+
+NORT   LDA   #10
+       PSHS  A
+A@     TFR   X,Y
+       LDA   1,S
+       PSHS  A
+B@     LDA   ,U+
+       ANDA  ,X
+       TST   XGH
+       BEQ   T@
+       ORA   XGV
+T@     STA   ,X+
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       TFR   Y,X
+       COM   XGV
+       LEAX  160,X
+       DEC   ,S
+       BNE   A@
+       LEAS  2,S
+       LDX   #$3839
+       STX   $FFA0
+       CLRA
+       LDB   ,S+
+       INCB
+       ADDD  <LPRTH
+       STD   <LPRTH
+       PULS  X,D,Y,U
+       LDS   OLSTCK
+       RTS
+
+CVRTF  PSHS  X,D,Y,U
+       LDA   #96
+       PSHS  A
+       LDY   #$FA00 *TABLE
+       PSHS  Y
+       LDU   #$8000 *OUTPUT TABLE*
+       PSHS  U
+       LDU   #$8200 *output font*
+       PSHS  U
+
+A@     LDA   #3
+       JSR   PAGEIN
+       LDY   4,S
+       LDA   ,Y+
+       LDX   ,Y++
+       STY   4,S
+       PSHS  A
+       LDA   #4
+       JSR   PAGEIN
+       PULS  A
+       LDU   2,S
+       STA   ,U+
+       LSRA
+       LSRA
+       LSRA
+       INCA
+       LSLA
+       LSLA
+       STA   ,U+
+       LDY   ,S
+       LEAY  -32768,Y
+       STY   ,U++
+       STU   2,S
+       LDU   ,S
+       LDB   #10
+       MUL
+       TFR   D,Y *BYTES TO COPY
+*Y=BYTES TO COPY
+*X=SOURCE
+*U=DESTINATION
+R@     LDA   #3
+       JSR   PAGEIN
+       LDA   ,X+
+       PSHS  A
+       LDA   #4
+       JSR   PAGEIN
+       PULS  A
+       PSHS  X,D,Y,U
+       JSR   CVB
+       PULS  X,D,Y,U
+       LEAU  4,U
+       LEAY  -1,Y
+       BNE   R@
+       STU   ,S
+       DEC   6,S
+       BNE   A@
+       LEAS  7,S
+       CLRA
+       JSR   PAGEIN
+       PULS  X,D,Y,U,PC
+
+
+
+
+CVB    PSHS  B,U
+       LEAU  4,U
+       LDB   #4
+       PSHS  B
+A@     CLRB
+       LSRA
+       BCC   V@
+       ORB   #%00001111
+V@     LSRA
+       BCC   G@
+       ORB   #%11110000
+G@     STB   ,-U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       PULS  B,U,PC
+
+
+******
+*FLEN*
+******
+* Finds the length of a string
+* in pixels.
+* Enter: X points to string
+* (delimited by CR or NULL)
+* Exit : D will be the total #
+*        X points to NULL/CR +1
+* of pixels, used.
+FLEN   PSHS  Y
+       LDY   #0
+A@     LDA   ,X+
+       BEQ   B@
+       CMPA  #13
+       BEQ   B@
+       BSR   FPER
+       LEAY  A,Y
+       BRA   A@
+B@     TFR   Y,D
+       PULS  Y,PC
+
+
+
+
+FPER   PSHS  B,X
+       LDB   $FFA4
+       PSHS  B
+       LDB   #$28
+       STB   $FFA4
+       SUBA  #32
+       CLRB
+       EXG   A,B
+       LSLB
+       ROLA
+       LSLB
+       ROLA
+       ADDD  #$8000
+       TFR   D,X
+       LDA   ,X
+       INCA
+       PULS  B
+       STB   $FFA4
+       PULS  X,B,PC
+
+       END

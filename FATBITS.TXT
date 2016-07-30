@@ -1,0 +1,815 @@
+       NAM   FATBITS
+
+TASK0  EQU   %01000000
+TASK1  EQU   %01000001
+
+       INCL  DEFS.TXT :7
+       INCL  LOWDEFS.TXT :7
+       ORG   $6000
+       FDB   FATHND
+       FDB   FATPEN
+       FDB   FATBIT
+       FDB   NEWWND
+       FDB   BITWND
+*
+* FATBITS EDITING
+*
+* TECH NOTES:
+* FATBITS WINDOW IS 33X16 PIXELS
+* EACH PIX IS AN 8 X 8 BLOCK OF
+* THE REGULAR PIXEL
+
+* MOVE WINDOW COMMAND (HAND)
+NFL    FCB   0 NEGATIVE FLAG
+
+FATHND LDA   #2
+       JSR   [PAGEIN]
+       JSR   [GET]
+       CLRA
+       JSR   [PAGEIN]
+       LDX   FATX
+       STX   FXS
+       LDA   FATY
+       STA   FYS
+
+FATH2  LDA   $FF00
+       ANDA  #1
+       BEQ   A@
+       JSR   [RPLARW]
+       JMP   [MENU]
+A@     JSR   [JOYSTK]
+       LDD   <JOYX
+       SUBD  <AX
+       CLR   NFL
+       CMPD  #0
+       BGE   Q@
+       COM   NFL
+       COMA
+       COMB
+       ADDD  #1
+Q@     LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       TST   NFL
+       BNE   F@
+       COMA
+       COMB
+       ADDD  #1
+F@     ADDD  FXS
+       CMPD  #0
+       BGE   W@
+       LDD   #0
+W@     CMPD  #309-32
+       BLO   B@
+       LDD   #309-32
+B@     STD   <JOYX
+       CLR   NFL
+       CLRA
+       LDB   FYS
+       PSHS  D
+       LDB   <AY
+       PSHS  D
+       LDB   <JOYY
+       SUBD  ,S++
+       COMA
+       COMB
+       ADDD  #1
+       CLR   NFL
+       CMPD  #0
+       BPL   R@
+       COM   NFL
+       COMA
+       COMB
+       ADDD  #1
+R@     LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       TST   NFL
+       BEQ   S@
+       COMA
+       COMB
+       ADDD  #1
+S@     ADDD  ,S++
+       CMPD  #0
+       BPL   X@
+       CLRA
+       CLRB
+X@     CMPD  #155-16
+       BLO   C@
+       LDD   #155-16
+C@     STB   <JOYY
+
+       JSR   [VALID]
+
+       LDD   <JOYX
+       CMPD  BSX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  BSY
+       LBEQ  FATH2
+A@
+
+       JSR   [RPLARW]
+       LDD   <JOYX
+       STD   FATX
+       STD   BSX
+       LDA   <JOYY
+       STA   FATY
+       STA   BSY
+       JSR   BITWN2
+
+       JSR   [DRWARW]
+       JMP   FATH2
+BSX    FDB   0
+BSY    FCB   0
+
+* PENCIL
+FATPEN CLRA
+       JSR   [VIEW]
+       LDA   #2
+       JSR   [PAGEIN]
+       JSR   [GET]   *-*
+
+       LDA   <AY
+       ADDA  #11
+       CMPA  #26
+       BHS   A@
+       LDA   #26
+A@     CMPA  #153
+       BLS   B@
+       LDA   #153
+B@     STA   <JOYY
+       LDD   <AX
+       ADDD  #3
+       CMPD  #306
+       BLS   C@
+       LDD   #306
+C@     CMPD  #46
+       BHS   D@
+       LDD   #46
+D@     STD   <JOYX
+
+       LDD   <JOYX
+       SUBD  #45
+       LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       ADDD  FATX
+       STD   PH1
+       LDA   <JOYY
+       SUBA  #26
+       LSRA
+       LSRA
+       LSRA
+       ADDA  FATY
+       STA   PV1
+       JSR   [PPOINT]
+* B=COLOR
+
+       CMPB  COLOR
+       BNE   A@
+       LDB   ERCOLR
+       BRA   B@
+A@     LDB   COLOR
+B@     STB   PCOLR
+
+       CLRA
+       JSR   [PAGEIN]
+
+       JSR   [RPLARW]
+
+FP3    JSR   FP1
+       JSR   [DRWARW]
+B@     LDA   $FF00
+       ANDA  #1
+       BEQ   Q@
+       JSR   [RPLARW]
+       LDA   #2
+       JSR   [PAGEIN]
+       JSR   [PUT]
+       CLRA
+       JSR   [PAGEIN]
+       JMP   [MENU]
+Q@     JSR   [JOYSTK]
+       LDA   <JOYY
+       ADDA  #11
+       STA   <JOYY
+       LDD   <JOYX
+       ADDD  #3
+       STD   <JOYX
+* VALIDATE COORDS
+       LDD   <JOYX
+       CMPD  #46
+       BHI   J@
+       LDD   #46
+       STD   <JOYX
+J@     CMPD  #306
+       BLO   K@
+       LDD   #306
+       STD   <JOYX
+K@     LDA   <JOYY
+       CMPA  #26
+       BHI   M@
+       LDA   #26
+       STA   <JOYY
+M@     CMPA  #153
+       BLO   N@
+       LDA   #153
+       STA   <JOYY
+N@
+**
+       LDX   <JOYX
+       LEAX  -3,X
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       SUBA  #11
+       CMPA  <AY
+       LBEQ  B@
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       LEAX  -3,X
+       STX   <AX
+       LDA   <JOYY
+       SUBA  #11
+       STA   <AY
+       JMP   FP3
+
+* SET POINT <AX,AY ON SCREEN
+* AND BIG WINDOW
+FP1    LDD   <JOYX
+       CMPD  #308
+       BLS   K@
+       LDD   #308
+K@     SUBD  #45    44
+       LSRA
+       RORB /2
+       LSRA
+       RORB /4
+       LSRA
+       RORB /8
+       STB   FBIGX
+       LDA   <JOYY
+       SUBA  #26
+       LSRA
+       LSRA
+       LSRA  /8
+       STA   FBIGY
+
+       PSHS  D
+       LDB   PCOLR
+       JSR   BIGBIT
+       PULS  D
+       ADDA  FATY
+       STA   PV1
+       CLRA
+       ADDD  FATX
+       STD   PH1
+       LDA   #2
+       JSR   [PAGEIN]
+       LDB   PCOLR
+       JSR   [PSET]
+       CLRA
+       JMP   [PAGEIN]
+
+FXSVE  FDB   0
+FYSVE  FCB   0
+TWOPGE FCB   0
+
+* NEW WINDOW
+NEWWND CLRA
+       JSR   [PAGEIN]
+       JSR   [VIEW]
+       JSR   [GET]
+       JMP   FATBT2
+
+FATBIT LDX   FTCHK
+       JSR   [TOGCHK]
+
+       LDX   <OH1
+       BEQ   A@
+       JSR   [PUTOVL]
+A@
+
+
+       COM   <FATFLG
+       TST   <FATFLG
+       BNE   A@
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [VIEW]
+       JSR   [GET]
+       JMP   [MENU]
+A@     JSR   [PUT]
+FATBT2 LDA   #1
+       LDB   #8
+       JSR   [PCOPY]
+       JSR   [WTBUT]
+       CLR   FYSVE
+       LDX   #0
+       STX   FXSVE
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+
+       CLR   TWOPGE
+* GET THE INITIAL BOX
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [VIEW]
+
+       LDA   #4
+       STA   LNEWDT  FOR VALID
+A@     LDA   $FF00
+       ANDA  #1
+       LBEQ  D@
+       JSR   [JOYSTK]
+       JSR   [VALID]
+       LDX   <JOYX
+       CMPX  #309-32
+       BLO   Q@
+       LDX   #309-32
+       STX   <JOYX
+Q@     LDA   <JOYY
+       CMPA  #155-16
+       BLO   R@
+       LDA   #155-16
+       STA   <JOYY
+R@     LDX   <JOYX
+       CMPX  FXSVE
+       BNE   C@
+       LDA   <JOYY
+       CMPA  FYSVE
+       BNE   C@
+       JSR   [EDITBX]
+       JMP   A@
+C@     LDX   <JOYX
+       STX   OH1
+       STX   FXSVE
+       LEAX  32,X
+       STX   OH2
+       LDA   <JOYY
+       STA   OV1
+       STA   FYSVE
+       ADDA  #15
+       STA   OV2
+B@     LDA   TWOPGE
+       EORA  #2
+       STA   TWOPGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JSR   [EDITBX]
+       LDA   TWOPGE
+       JSR   [VIEW]
+       JMP   A@
+D@     CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       CLRA
+       JSR   [VIEW]
+       CLR   LNEWDT
+
+       LDX   OH1
+       STX   FATX
+       LDX   #0
+       STX   OH1
+       LDA   OV1
+       STA   FATY
+
+* YOU ONLY CLEAR THE WINDOW
+* THE FIRST TIME YOU WANT TO
+* DRAW THE BITS;
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       JSR   [PAGEIN]
+       JSR   [GET]
+       CLRA
+       JSR   [PAGEIN]
+
+       JSR   CLRWND
+
+       JSR   BITWND  DRAW BITS
+
+       JMP   [MENU]
+
+
+* FATX:
+* 44 TO 308-32
+* FATY:
+* 24 TO 155-15
+FATX   FDB   0   XPOS FAT WINDOW
+FATY   FCB   0   YPOS FAT WINDOW
+
+* THIS ROUTINE CLEARS THE
+* WINDOW  no regs preserved!
+CLRWND LDU   #$8000+24*160+22
+       LDA   #155-24
+       PSHS  A
+       LDD   #$FFFF
+A@     PSHS  U
+       LDX   #13
+B@     STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       DEX
+       BNE   B@
+       STD   ,U++
+       STA   ,U+
+       PULS  U
+       LEAU  160,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       RTS
+
+INC7   INC   <BV2
+       DEC   <BV1
+       LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       RTS
+
+* THIS ROUTINE CONVERTS THE
+* DATA IN FATX,FATY TO
+* FATX+32 TO FATY+15 TO FAT
+* BITS INSIDE THE WINDOW.
+* ASSUMES DATA ON PAGE #2
+* FATBITS DRAWN ON PAGE #0
+BITWND LDX   #47+4
+       STX   <BH1
+       LDX   #47+33+1+4
+       STX   <BH2        DIALOG
+       LDA   #28        BOX FOR
+       STA   <BV1       FAT VIEW
+       LDA   #28+16+1
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       JSR   INC7
+       JSR   INC7
+       JSR   [BOX]
+       JSR   INC7
+       JSR   [BOX]
+
+BITWN2 LDA   #2
+       JSR   [PAGEIN]
+
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   $FFA4
+       STX   $FFAC
+       LDX   $FFA6
+       STX   $FFAE
+
+       CLRA
+       JSR   [PAGEIN]
+* TASK0=PAGE 0
+* TASK1=PAGE 2
+
+       LDA   FATY
+       LDB   #160
+       MUL
+       ADDA  #$80
+       TFR   D,X
+       LDD   FATX
+       LSRA
+       RORB
+       ABX
+       LDU   #$8000+29*160+24+2
+* X=ADDRESS OF PIXELS ON SHIT
+* U=ADDRESS OF THE SMALL
+*   "REAL SIZE" WINDOW
+
+* %%%
+* COPY THE FULL PAGE PIXELS
+* ONTO THE SMALL WINDOW
+* %%%
+
+       LDA   FATX+1  DO WE HAVE
+       ANDA  #1      TO SHIFT?
+       LBEQ  BIT001  IF NOT!
+
+       LDY   #CTBL
+       LDA   #16
+       STA   <BV1
+A@     LDB   #16  16 FULL
+B@     LDA   #TASK1
+       STA   $FF91
+       LDA   ,X+
+       ANDA  #$0F
+       LDA   A,Y
+       PSHS  A
+       LDA   ,X
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       ORA   ,S
+       STA   ,S
+       LDA   #TASK0
+       STA   $FF91
+       PULS  A
+       STA   ,U+
+       DECB
+       BNE   B@
+*
+* DO 33RD PIXEL:
+*
+       LDB   ,U
+       LDA   #TASK1
+       STA   $FF91
+       LDA   ,X
+       ANDA  #$0F
+       LDA   A,Y
+       PSHS  A
+       ANDB  #$0F
+       ORB   ,S+
+       LDA   #TASK0
+       STA   $FF91
+       STB   ,U
+       LEAX  144,X
+       LEAU  144,U
+       DEC   <BV1
+       BNE   A@
+
+       JMP   BIT002
+
+BIT001 PSHS  DP
+       STS   STACK
+       TFR   X,S
+       LEAU  6,U
+       LDA   #16
+       STA   COUNT   COUNTER
+A@     LDA   #TASK1
+       STA   $FF91
+       PULS  X,B,Y,DP
+       LDA   #TASK0
+       STA   $FF91
+       PSHU  X,B,Y,DP
+       LEAU  12,U
+       LDA   #TASK1
+       STA   $FF91
+       PULS  X,B,Y,DP
+       LDA   #TASK0
+       STA   $FF91
+       PSHU  X,B,Y,DP
+       LEAU  11,U
+       LDA   #TASK1
+       STA   $FF91
+       PULS  DP,X,Y
+       LDA   #TASK0
+       STA   $FF91
+       TFR   Y,D
+       ANDB  #$F0
+       TFR   D,Y
+       PSHU  DP,X,Y
+       LEAS  143,S
+       LEAU  154,U
+       DEC   COUNT
+       BNE   A@
+
+       LDS   STACK
+       PULS  DP
+
+* NOW DRAW THE ENLARGED PIXELS
+* USING THE DATA THAT IS HELD,
+* PROPERLY ROTATED, ABOVE.
+
+BIT002 STS   STACK
+
+* X=ADDRESS OF SMALL PIXELS
+* U=ADDRESS OF BIG PIXELS
+       LDX   #$8000+29*160+24+2
+       LDS   #$8000+26*160+23+8
+
+       LDD   #0
+       STD   <LH2
+
+       LDA   #16
+       STA   <BV1
+B@     STS   <LH1
+       LDA   #16
+       STA   <BV2
+       CLR   <LH2
+       INC   <LH2+1
+A@     INC   <LH2
+       LDA   <LH2
+       CMPA  #3     5
+       BHI   BIT008
+       LDA   <LH2+1
+       CMPA  #3
+       BHI   BIT008
+       INX
+       LEAS  8,S
+       JMP   BIT009
+BIT008 LDA   ,X
+       ANDA  #$F0
+       STA   <LV1
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       ORA   <LV1
+       TFR   A,B
+       TFR   D,Y   Y=P1P1
+       LDA   ,X+
+       ANDA  #$0F
+       STA   <LV1
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   <LV1
+       TFR   A,B   D=P2P2
+       STX   <BH1
+       STU   <BH2
+*
+       TFR   Y,X
+       TFR   D,Y
+       ORB   #$0F
+       TFR   D,U
+       TFR   X,D
+       ORB   #$0F
+       EXG   X,D
+*
+* D,X=P1P1   Y,U=P2P2
+*
+       STS   SHIT
+*
+       PSHS  D,X,Y,U
+       LEAS  168,S
+       PSHS  D,X,Y,U
+       LEAS  168,S
+       PSHS  D,X,Y,U
+       LEAS  168,S
+       PSHS  D,X,Y,U
+       LEAS  168,S
+       PSHS  D,X,Y,U
+       LEAS  168,S
+       PSHS  D,X,Y,U
+       LEAS  168,S
+       PSHS  D,X,Y,U
+*      LEAS  168,S
+*      PSHS  D,X,Y,U
+       LDS   SHIT
+       LEAS  8,S
+*
+       LDX   <BH1
+       LDU   <BH2
+BIT009 DEC   <BV2
+       LBNE  A@
+*
+       LDA   ,X
+       ANDA  #$F0
+       STA   <LV1
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       ORA   <LV1
+       TFR   A,B
+       TFR   D,Y
+       ORB   #$0F
+       EXG   Y,D
+       LEAS  -4,S
+       PSHS  D,Y
+       LEAS  164,S
+       PSHS  D,Y
+       LEAS  164,S
+       PSHS  D,Y
+       LEAS  164,S
+       PSHS  D,Y
+       LEAS  164,S
+       PSHS  D,Y
+       LEAS  164,S
+       PSHS  D,Y
+       LEAS  164,S
+       PSHS  D,Y
+*
+       LDS   <LH1
+       LEAS  160*8,S
+       LEAX  144,X
+       DEC   <BV1
+       LBNE  B@
+
+       LDS   STACK
+
+       CLRA
+       JMP   [VIEW]
+
+COUNT  FCB   0
+SHIT   FDB   0
+
+* TABLE USED TO CONVERT
+* %0000XXXX TO %XXXX0000
+CTBL   FCB   $00,$10,$20,$30
+       FCB   $40,$50,$60,$70
+       FCB   $80,$90,$A0,$B0
+       FCB   $C0,$D0,$E0,$F0
+
+* BIGBIT
+* THIS ROUTINE DRAWS AN 8 X 8
+* BLOCK OF COLOR #B AT FBIGX,
+* FBIGY - MAKES THE 8 X 8 BLOCK
+* AND ALSO SETS THE SMALL WINDOW
+FBIGX  FCB   0  0-32
+FBIGY  FCB   0  0-15
+
+BSTBL9 FDB   $0000,$1111,$2222,$3333,$4444
+       FDB   $5555,$6666,$7777,$8888,$9999
+       FDB   $AAAA,$BBBB,$CCCC,$DDDD,$EEEE,$FFFF
+
+BIGBIT TFR   B,A
+
+       LDX   PH1
+       LDB   PV1
+       PSHS  X,B
+
+       LDB   FBIGX
+       ADDB  #52    48 *:*:*
+       CLR   PH1
+       STB   PH1+1
+       LDB   FBIGY
+       ADDB  #29
+       STB   PV1
+       TFR   A,B
+       JSR   [PSET]
+
+       PULS  X,B
+       STX   PH1
+       STB   PV1
+
+* DON'T SET 6,3 X,Y PIXELS:
+* AT THE UPPER LEFT
+       LDB   FBIGY
+       CMPB  #2
+       BHI   A@
+       LDB   FBIGX
+       CMPB  #5
+       BLS   ?RTS
+A@     LDX   #$8000+26*160+23
+
+       LDB   FBIGX
+       LSLB
+       LSLB
+       ABX
+       LDB   FBIGY
+       BEQ   B@
+A@     LEAX  8*160,X
+       DECB
+       BNE   A@
+B@
+
+       LDU   #BSTBL9
+       LSLA
+       LDD   A,U
+
+* THIS ROUTINE IS ALSO USED
+* IN THE EDITOR;
+BLK8   STD   ,X
+       STD   160,X
+       STD   320,X
+       STD   480,X
+       STD   160*4,X
+       STD   160*5,X
+       STD   160*6,X
+       ORB   #$0F
+       STD   2,X
+       STD   162,X
+       STD   322,X
+       STD   482,X
+       STD   160*4+2,X
+       STD   160*5+2,X
+       STD   160*6+2,X
+
+       RTS
+
+STACK  FDB   0
+
+       END
+
+
+
+
+

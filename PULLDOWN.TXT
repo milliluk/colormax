@@ -1,0 +1,324 @@
+       NAM   PULLDOWN MENU
+* PULLDOWN MENU ROUTINE
+*
+* LDX #VALIDITY TABLE
+* JSR PULLDN
+* FCC /OPTION1/,0
+* FCC /OPTION2/,0,0
+* FDB OPT1,OPT2
+*
+* VALIDITY TABLE:
+* 1 BYTE FOR EACH OPTION
+* 0=VALID/FF=SQUIGGLE IT OUT
+* PDX1=X POSITION
+* PDY1 IS ALWAYS 10
+
+VTBL   FDB   0
+
+PULLDN STX   VTBL
+
+       CLRA
+       LDB   #2
+       JSR   PCOPY COPY ICON TO
+Z@     LDA   #2    SHIT & WATCH!
+       JSR   VIEW
+
+       LDD   PDX1  MAKE PDX1
+       ORB   #1    ODD
+       STD   PDX1
+
+       LDX   ,S
+* COUNT NUMBER OF OPTIONS
+*
+       CLRB
+A@     LDA   ,X+
+       BNE   A@
+       INCB
+       TST   ,X
+       BNE   A@
+* B=# OF OPTIONS
+       STB   NUMOPT
+       LDA   #10
+       MUL
+       ADDB  #13
+       STB   PDY2
+
+* FIND LONGEST HORIZ MENU OPT
+
+       LDX   ,S
+       CLRA
+       PSHS  A
+D@     JSR   FLEN
+B@     CMPB  ,S
+       BLO   C@
+       STB   ,S
+C@     TST   ,X
+       BNE   D@
+
+       PULS  B   MAX # CHARS
+       ADDD  #12  SPACE ON LEFT
+       ADDD  PDX1
+       ANDB  #$FE MAKE IT EVEN
+       STD   PDX2
+
+* PDX2,PDY2 SETUP;
+* DRAW BOX AROUND IT AND
+* DO THE SHADOWING
+
+       LDX   PDX1
+       STX   <BH1
+       LDX   PDX2
+       STX   <BH2
+       LDA   PDY1
+       STA   <BV1
+       LDA   PDY2
+       STA   <BV2
+       LDB   #15
+       JSR   FILLED  FILLEDINBOX
+       CLRB
+       JSR   BOX
+       LDX   PDX1
+       LEAX  2,X  4,X
+       STX   <LH1
+       LDX   PDX2
+       LEAX  1,X
+       STX   <LH2
+       LDA   PDY2
+       INCA
+       STA   <LV1
+       STA   <LV2
+       JSR   LINE
+
+       LDX   PDX2
+       INX
+       STX   <LH1
+       STX   <LH2
+       LDA   PDY1
+       ADDA  #3     ****
+       STA   <LV1
+       LDA   PDY2
+       INCA
+       STA   <LV2
+       JSR   LINE
+
+       LDD   PDX1
+       ADDD  #3
+       STD   <LPRTH
+       LDA   #13
+       STA   <LPRTV
+
+       PULS  X
+       LDY   VTBL
+       LDU   <LPRTH
+A@     LDA   ,Y+
+       COMA
+       STA   SQUIGL
+C@     LDA   ,X+
+       BEQ   B@
+       JSR   LYNPRT
+       BRA   C@
+B@     STU   <LPRTH
+       LDA   <LPRTV
+       ADDA  #10
+       STA   <LPRTV
+       TST   ,X
+       BNE   A@
+* SET RTS BACK TO PGM
+       INX
+       STX   HOOK1
+       LDB   NUMOPT
+       LSLB
+       ABX
+       STX   HOOK2
+
+       LDA   #$FF
+       STA   SQUIGL
+
+* SET UP FOR PULLDOWN ROUTINE:
+
+       CLRA
+       JSR   VIEW  LOOK AT ICONS
+
+       LDA   #$FF
+       STA   WHICH1
+       LDX   #PD1
+       STX   MVEHK
+       LDA   TYPING
+       LDX   OH1
+       PSHS  A,X
+       LDX   #0
+       STX   OH1
+       CLR   TYPING
+       JSR   MVEARW
+       PULS  A,X
+       STA   TYPING
+       STX   OH1
+       LDX   #ARTS
+       STX   MVEHK
+
+       LDA   WHICH1
+       BMI   A@
+       LDX   VTBL
+       LDB   A,X
+       CMPB  #$FF
+       BEQ   A@
+       LDX   HOOK1
+       LSLA
+       LDX   A,X
+       BEQ   A@     0=NOT VALID
+       PSHS  X      FOR RTS
+       JSR   BLINKY BLINK IT
+       BRA   ERPDM
+A@     BSR   ERPDM
+       JMP   [HOOK2]
+
+* ERASE PULLDOWN MENU
+ERPDM  JSR   WTBUT     ***
+       LDA   #2  SHIT
+       CLRB      ICON
+       JMP   PCOPY
+ARTS   RTS
+
+BLINKY LDA   #7
+       PSHS  A
+A@     JSR   INV
+       LDX   #20000  25?
+B@     DEX
+       BNE   B@
+       DEC   ,S
+       BNE   A@
+       PULS  A,PC
+
+WHICH1 FCB   0
+PD99   TST   WHICH1
+       BMI   ?RTS
+       JSR   INV
+       LDA   #$FF
+       STA   WHICH1
+       RTS
+PD1    LDX   <AX
+       CMPX  PDX1
+       BLO   PD99
+       CMPX  PDX2
+       BHI   PD99
+       LDA   <AY
+       CMPA  PDY1
+       BLO   PD99
+       ADDA  #4
+       CMPA  PDY2
+       BHI   PD99
+       SUBA  #4
+* VALID OPTION; DETERMINE WHICH
+* ONE!
+       SUBA  PDY1
+       CLRB
+A@     CMPA  #10
+       BLO   B@
+       INCB
+       SUBA  #10
+       BRA   A@
+B@     CMPB  WHICH1
+       BEQ   ?RTS
+
+       PSHS  B    B=NEW OPTION
+       JSR   INV  ERASE OLD
+       PULS  B
+       STB   WHICH1
+* FALL THRU
+
+INV    LDB   WHICH1
+       LDX   HOOK1
+       LSLB
+       LDX   B,X
+       BEQ   ?RTS  0-DON'T INVRT
+       LDB   WHICH1
+       LDX   VTBL
+       LDA   B,X
+       CMPA  #$FF
+       BEQ   ?RTS
+
+       LDB   WHICH1
+       LDA   #10
+       MUL
+       ADDB  PDY1
+       LDX   #$8000+320
+A@     LEAX  160,X
+       DECB
+       BNE   A@
+       LDD   PDX1
+       LSRA
+       RORB
+       INCB
+       ABX
+*X=POSITION TO INVERT AT FOR
+*  10 LINES
+       LDD   PDX2
+       SUBD  PDX1
+       LSRA
+       RORB
+*B=# OF BYTES TO INVERT
+
+       LDA   #10  #LINES
+A@     PSHS  X,B
+B@     COM   ,X+
+       DECB
+       BNE   B@
+       PULS  X,B
+       LEAX  160,X
+       DECA
+       BNE   A@
+       RTS
+
+PDX1   FDB   90
+PDY1   FCB   10  ALWAYS!
+PDX2   FDB   0
+PDY2   FCB   0
+NUMOPT FCB   0
+HOOK1  FDB   0
+HOOK2  FDB   0
+
+
+* PCOPY
+* A=SOURCE PAGE
+* B=DESTINATION PAGE
+* 0=ICON;1=FULL;2=SHIT
+A@     FCB   60,48,52,44,40,36,32,28,24,20,16,12,8,4,0
+PCOPY  PSHS  D,X,U
+       LDX   #A@
+       LDA   A,X
+       LDB   B,X
+
+       LDX   $FFA3
+       PSHS  X,DP
+
+       STD   $FFA3
+       LDA   #4    A=#/BLOCKS
+
+*COPENT
+       STS   STAK99
+A@     LDS   #$6000
+       LDU   #$8000+6
+B@     PULS  B,DP,X,Y
+       PSHU  B,DP,X,Y
+       LEAU  12,U
+       PULS  B,DP,X,Y
+       PSHU  B,DP,X,Y
+       LEAU  10,U
+       PULS  X,Y
+       PSHU  X,Y
+       LEAU  10,U
+       CMPS  #$8000
+       BNE   B@
+       INC   $FFA3
+       INC   $FFA4
+       DECA
+       BNE   A@
+
+       LDS   STAK99
+       PULS  X,DP
+       STX   $FFA3
+
+       PULS  D,X,U,PC
+
+       END
+

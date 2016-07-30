@@ -1,0 +1,194 @@
+       NAM   WINDOW SUBROUTINES
+
+* GET
+*
+* THIS ROUTINE GETS THE PORTION
+* OF THE REAL WINDOW THAT IS
+* DISPLAYABLE AND PUTS IN ON
+* THE SCREEN.  THE COORDINATES
+* OF THE REAL SCREEN GO IN
+* WINDOX, WINDOY
+*
+WINDOX FDB   0  (0-54)
+WINDOY FCB   0  (0-69)
+DONE   FCB   0
+PUTFLG FCB   0  0=PUT/255=GET
+
+GET    LDA   #$FF
+       STA   PUTFLG
+GET2   LDU   #$8000+22+24*160
+* U=SCREEN POSITION
+       LDA   #48
+       LDB   WINDOY
+A@     CMPB  #52
+       BLO   B@
+       SUBB  #52
+       INCA
+       BRA   A@
+B@     PSHS  A
+       PSHS  B
+
+* A=STARTING PAGE NUMBER
+* B=# ROWS OFFSET INTO THAT
+*   PAGE
+       STA   $FFA2
+       INCA
+       STA   $FFA3
+
+       LDB   WINDOY
+       LDA   #160
+       MUL
+       ADDD  #$4000
+       CMPD  #$6000
+       BLO   A@
+       SUBD  #$2000
+A@     TFR   D,X    X=WHERE
+       LDD   WINDOX
+       LSRA
+       RORB
+       ABX
+
+       LDA   #52
+       SUBA  ,S+
+       STA   DONE  #ROWS DONE
+       JSR   MOVE
+       INC   ,S
+
+A@     LDA   ,S
+       STA   $FFA2
+       INCA
+       STA   $FFA3
+       LEAX  -$2000,X
+       LDA   #131
+       SUBA  DONE
+       CMPA  #52
+       BLO   B@
+       LDA   #52
+B@     PSHS  A     A=# TO DO
+       ADDA  DONE
+       STA   DONE
+       PULS  A     A=# ROWS
+       BSR   MOVE
+       INC   ,S    NEXT BLOCK
+       LDA   DONE
+       CMPA  #131
+       BLO   A@
+
+       LDA   #$3A
+       STA   $FFA2
+       INCA
+       STA   $FFA3
+       LEAS  1,S
+       RTS
+
+* THIS ROUTINE COPIES "A"
+* ROWS OF DATA FROM "X" TO "U"
+MCOUNT FCB   0
+OLDSTK FDB   0
+MOVE   TST   PUTFLG
+       BNE   A@
+       EXG   X,U
+A@     STA   MCOUNT
+       STS   OLDSTK
+
+       TFR   X,S
+
+* MOVE 1 ROW (133 BYTES)
+
+AA1    LEAU  6,U
+
+       PULS  D,X,Y 1
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 2
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 3
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 4
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 5
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 6
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 7
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 8
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 9
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 10
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 11
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 12
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 13
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 14
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 15
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 16
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 17
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 18
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 19
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 20
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 21
+       PSHU  D,X,Y
+       LEAU  12,U
+       PULS  D,X,Y 22
+       PSHU  D,X,Y
+* 22x6=132, DO 1 MORE:
+       LEAU  7,U
+       PULS  A
+       PSHU  A
+
+       LEAS  27,S
+       LEAU  28,U
+
+       DEC   MCOUNT
+       LBNE  AA1
+
+       TFR   S,X
+       TST   PUTFLG
+       BNE   A@
+       EXG   X,U
+A@     LDS   OLDSTK
+       RTS
+
+* PUT
+*
+* THIS ROUTINE, ODDLY ENOUGH,
+* DOES THE OPPOSITE OF GET.
+* IT PUTS THE DATA ON THE ICON
+* SCREEN BACK WHERE IT BELONGS
+* ON THE BIG SCREEN
+*
+PUT    CLR   PUTFLG
+       JMP   GET2
+
+       END

@@ -1,0 +1,522 @@
+       NAM   STRETCH
+
+STRET  CLR   <LNEWDT
+
+       LDA   #1
+       LDB   #5
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   DOWN
+       JSR   [PUT]
+       CLR   <WPAGE
+       LDX   <OH1
+       STX   <BH1
+       LDX   <OH2
+       STX   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       STA   <BV2
+       JSR   [POLCAT]
+       CMPA  #'H
+       LBEQ  STRET1
+       CMPA  #'D
+       LBEQ  STRET2
+A@     JSR   [DRWARW]
+D@     LDA   $FF00
+       LSRA
+       LBCC  DOSTR4
+       JSR   [JOYSTK]
+       JSR   [VALID]
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   B@
+       LDA   <JOYY
+       CMPA  <AY
+       BEQ   D@
+B@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+       LDA   <WPAGE
+       JSR   [PAGEIN]
+       LDX   <JOYX
+       CMPX  <OH1
+       BHI   E@
+       LDX   <OH1
+E@     STX   <BH2
+       LDA   <JOYY
+       CMPA  <OV1
+       BHI   F@
+       LDA   <OV1
+F@     STA   <BV2
+       JSR   [GET]
+       CLRB
+       JSR   [BOX]
+       LDA   <WPAGE
+       JSR   [VIEW]
+       EORA  #2
+       STA   <WPAGE
+       JMP   A@
+
+* HALF SIZE
+STRET1 LDD   <OH2
+       SUBD  <OH1
+       LSRA
+       RORB
+       ADDD  <OH1
+       STD   <BH2
+       LDA   <OV2
+       SUBA  <OV1
+       LSRA
+       ADDA  <OV1
+       STA   <BV2
+       JMP   DOSTR
+
+STRET2 LDD   <OH1
+       STD   <BH1
+       LDD   <OH2
+       SUBD  <OH1
+       LSLB
+       ROLA
+       ADDD  <OH1
+       STD   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       SUBA  <OV1
+       LSLA
+       STA   <BV2
+       LDD   <BH2
+       CMPD  #309
+       LBHI  ENDSTR ARE THESE
+       LDA   <BV2   RIGHT????
+       CMPA  #155
+       LBHI  ENDSTR
+       BRA   DOSTR
+
+DOSTR4 JSR   [RPLARW]
+
+* DO THE ACTUAL STRETCH:
+* STRETCH FROM OH1,OH2,OV1,OV2
+*           TO BH1,BH2,BV1,BV2
+* COORDS ARE ALREADY SORTED FOR
+* YOU.  (GEE THANKS)
+* "Gee thanks"?  ha!  Twit.
+DOSTR  LDD   <BH2
+       SUBD  <BH1
+       CMPD  #4     ARE THESE
+       LBLO  ENDSTR RIGHT
+       LDA   <BV2   TOO????
+       SUBA  <BV1
+       CMPA  #4
+       LBLO  ENDSTR
+
+* STRETCH/SHRINK ROUTINES
+* GO RIGHT HERE
+
+* First, find the SIZES of the
+* damned things.
+
+       LDD   <OH2
+       SUBD  <OH1
+       ADDD  #1
+       STD   SOH
+
+       LDD   <BH2
+       SUBD  <BH1
+       ADDD  #1
+       STD   SNH
+
+       LDA   <OV2
+       SUBA  <OV1
+       INCA
+       STA   SOV
+
+       LDA   <BV2
+       SUBA  <BV1
+       INCA
+       STA   SNV
+
+* Now, create flags for both
+* horizontal and vertical, that
+* are 0 for SHRINK and NZ for
+* STRETCH.
+
+       CLR   SHS
+       LDX   SNH
+       CMPX  SOH
+       BLO   A@
+       COM   SHS
+A@
+
+       CLR   SVS
+       LDA   SNV
+       CMPA  SOV
+       BLO   A@
+       COM   SVS
+A@
+
+* Copy the damned overlay to
+* page 7
+       LDA   #6
+       LDB   #7
+       JSR   [PCOPY]
+
+       LDX   #$1C1D
+       STX   $FFA4
+       LDX   #$2021
+       STX   $FFA6
+       LDX   #$8000
+       STX   SINP
+       LDX   #$C000
+       STX   SOUT
+
+       LDY   #0
+       LDA   SHS
+       BEQ   A@ *SHRINK*
+       LDD   SNH
+B@     CMPD  SOH
+       BLO   C@
+       SUBD  SOH
+       LEAY  1,Y
+       BRA   B@
+A@     LDD   SOH
+D@     CMPD  SNH
+       BLO   C@
+       SUBD  SNH
+       LEAY  1,Y
+       BRA   D@
+C@     STY   SREP
+       STD   STIMS
+
+       LDY   #0
+       TST   SVS
+       BEQ   A@ *SHRINK VERT*
+       LDA   SNV
+B@     CMPA  SOV
+       BLO   C@
+       SUBA  SOV
+       LEAY  1,Y
+       BRA   B@
+A@     LDA   SOV
+D@     CMPA  SNV
+       BLO   C@
+       SUBA  SNV
+       LEAY  1,Y
+       BRA   D@
+C@     STA   VREM
+       TFR   Y,D
+       STB   VREP
+
+*COPY SHIT*
+       TST   SVS
+       BEQ   VSHR
+*VERT EXPANSION*
+       CLRA
+       LDB   SOV
+       TFR   D,X
+       CLRA
+       LDB   VREM
+       STD   K@+2
+       LDD   SOV-1
+       COMA
+       COMB
+       ADDD  #1
+       STD   N@+2
+       LDU   #0
+R@     LDB   VREP
+       BEQ   B@
+A@     JSR   SSIT
+       JSR   UPOUT
+       DECB
+       BNE   A@
+K@     LEAU  $7FFF,U
+B@     CMPU  SOV-1
+       BLO   C@
+N@     LEAU  $7FFF,U
+       JSR   SSIT
+       JSR   UPOUT
+       BRA   B@
+C@     JSR   UPIN
+       DEX
+       BNE   R@
+       JMP   SZ
+
+VSHR   CLRA
+       LDB   SNV
+       TFR   D,X
+       CLRA
+       LDB   VREM
+       STD   K@+2
+       LDD   SNV-1
+       COMA
+       COMB
+       ADDD  #1
+       STD   N@+2
+       LDU   #0
+R@     LDB   VREP
+       BEQ   B@
+A@     JSR   SSIT
+       JSR   UPIN
+       DECB
+       BNE   A@
+K@     LEAU  $7FFF,U
+B@     CMPU  SNV-1
+       BLO   C@
+N@     LEAU  $7FFF,U
+       JSR   SSIT
+       JSR   UPIN
+       BRA   B@
+C@     JSR   UPOUT
+       DEX
+       BNE   R@
+
+SZ
+
+
+
+* END HERE *
+* LEAVE THE PROPERLY STRETCHED
+* OVERLAY ON PAGE #6
+
+       LDX   <BH2
+       STX   <OH2
+       LDA   <BV2
+       STA   <OV2
+* ALSO:
+* RECALCULATE
+* OXR, OYSZE, OXSZE
+       LDD   <BH1
+       LSRA
+       RORB
+       PSHS  D
+       LDD   <BH2
+       LSRA
+       RORB
+       SUBD  ,S++
+       SUBD  #1
+       STB   <OXSZE
+
+       LDA   <BV2
+       SUBA  <BV1
+       INCA
+       STA   <OYSZE
+
+       LDB   #%11111111
+       LDA   <BH2+1
+       LSRA
+       BCS   U@
+       LDB   #%11110000
+U@     STB   <OXR
+       JMP   ENDSTR
+
+* JUMP HERE, WHEN DONE, TO
+* CLEAN THINGS UP AND RETURN
+* TO MENU.
+ENDSTR LDA   #5
+       LDB   #1
+       JSR   [PCOPY]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JSR   DOWN
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+
+
+
+
+*SPAD2 is the WRITE address
+*to the "screen", for the
+*"output" of the stretch/shrink
+*routine
+*ODDEV2=the odd/even flag for
+*writing.
+SPAD2  FDB   0
+ODDEV2 FCB   0
+
+*SWRT*
+*Writes pixels to the current
+*output line
+*Input B as the color
+SWRT   PSHS  X,B
+       LDX   SPAD2
+       COM   ODDEV2
+       BNE   T@
+       ORB   Z@
+       STB   ,X+
+       STX   SPAD2
+       PULS  X,B,PC
+T@     LSLB
+       LSLB
+       LSLB
+       LSLB
+       STB   Z@
+       PULS  X,B,PC
+Z@     FCB   0
+
+
+
+
+
+*Stretch Pointer ADdReSs
+SPADRS FDB   0
+*0=On an EVEN pixel.  NZ=on an ODD pixel
+ODDEVN FCB   0
+
+*Stretch pointer*
+*Fetches the next pixel off of
+*the continuous line defined
+*by SPADRS and ODDEVN.
+*It's returned in B.
+*
+SPOINT PSHS  X,A,Y,U
+       LDX   SPADRS
+       COM   ODDEVN
+       BNE   SPODD
+       LDB   ,X+
+       STX   SPADRS
+       ANDB  #15
+       PULS  X,A,Y,U,PC
+SPODD  LDB   ,X
+       LSRB
+       LSRB
+       LSRB
+       LSRB
+       PULS  X,A,Y,U,PC
+
+SOH    FDB   0
+       FCB   0
+SOV    FCB   0
+SNH    FDB   0
+       FCB   0
+SNV    FCB   0
+
+SHS    FCB   0
+SVS    FCB   0
+
+SINP   FDB   0
+SOUT   FDB   0
+
+
+
+SS1LNE LDA   SHS
+       LBNE  SS1STR
+*SHRINK 1 LINE*
+       LDX   SNH
+       LDU   #0
+       LDD   STIMS
+       STD   K@+2
+       LDD   SNH
+       COMA
+       COMB
+       ADDD  #1
+       STD   N@+2
+S@     LDY   SREP
+A@     JSR   SPOINT
+       LEAY  -1,Y
+       BNE   A@
+K@     LEAU  $7FFF,U
+       JSR   SWRT
+L@     CMPU  SNH
+       BLO   P@
+N@     LEAU  $7FFF,U
+       JSR   SPOINT
+       BRA   L@
+P@     DEX
+       BNE   S@
+       CLRB
+       JSR   SWRT
+       RTS
+
+
+
+*STRETCH ONE LINE*
+SS1STR
+       LDX   SOH
+* Setup the self-modifying code
+       LDD   STIMS
+       STD   K@+2
+       LDD   SOH
+       COMA
+       COMB
+       ADDD  #1
+       STD   N@+2
+*
+       LDU   #0
+A@     LDY   SREP
+       JSR   SPOINT
+       CMPY  #0
+       BEQ   L@
+B@     JSR   SWRT
+       LEAY  -1,Y
+       BNE   B@
+K@     LEAU  $7FFF,U
+L@     CMPU  SOH
+       BLO   M@
+N@     LEAU  $7FFF,U
+       JSR   SWRT
+       BRA   L@
+M@     DEX
+       BNE   A@
+       CLRB
+       JSR   SWRT
+       RTS
+
+
+SSIT   PSHS  X,D,Y,U
+       LDX   SINP
+       STX   SPADRS
+       LDX   SOUT
+       STX   SPAD2
+       CLRB
+       LDA   <OXL
+       CMPA  #255
+       BEQ   U@
+       COMB
+U@     STB   ODDEVN
+       STB   ODDEV2
+       JSR   SS1LNE
+       PULS  X,D,Y,U,PC
+
+
+SREP   FDB   0 *Times to repeat each pixel
+STIMS  FDB   0 *Tack one pixel in every HOW many pixels (the value)
+
+VREM   FCB   0
+VREP   FCB   0
+
+
+UPIN   PSHS  X
+       LDX   SINP
+       LEAX  160,X
+       CMPX  #$A000
+       BLO   A@
+       LEAX  -8192,X
+       INC   $FFA4
+       INC   $FFA5
+A@     STX   SINP
+       PULS  X,PC
+
+UPOUT  PSHS  X
+       LDX   SOUT
+       LEAX  160,X
+       CMPX  #$E000
+       BLO   A@
+       LEAX  -8192,X
+       INC   $FFA6
+       INC   $FFA7
+A@     STX   SOUT
+       PULS  X,PC
+
+       END

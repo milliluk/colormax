@@ -1,0 +1,89 @@
+       NAM   FIZZLE
+
+FIZZLE
+       LDA   #7
+       JSR   VIEW
+
+       CLRA
+       JSR   PAGEIN
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   #$1C1D
+       STX   $FFAC
+       LDX   #$1E1F
+       STX   $FFAE
+
+       LDA   #%00011110
+       STA   $FF99
+       LDA   #63
+       STA   $FF9A
+
+       STA   65496
+
+       LDX   #$7FFE
+       STX   <BH1
+       LDD   #1
+A@     LSRA
+       RORB
+       BCC   B@
+       EORA  <BH1
+       EORB  <BH1+1
+B@     TFR   D,X
+       CMPX  #32000
+       BLO   C@
+       LDX   #32000
+C@     LEAX  $8000,X
+       PSHS  D
+       LDB   #%01000000
+       STB   $FF91
+       LDA   ,X
+       LDB   #%01000001
+       STB   $FF91
+       STA   ,X
+       PULS  D
+       CMPX  #$8001
+       BNE   A@
+
+       LDB   #%01000000
+       STB   $FF91
+       LDA   $8000
+       LDB   #%01000001
+       STB   $FF91
+       STA   $8000
+
+       LDA   #%01000000
+       STA   $FF91
+
+       STA   65497
+       CLRA
+       JSR   VIEW
+
+       STS   <LH1
+       LDS   #PPPBUF
+       LDX   #Z@
+       LDY   #RGBCMP
+       LDB   #16
+       LDU   #$FFB0
+A@     LDA   ,X+
+       TST   $E00
+       BEQ   R@
+       LDA   A,Y
+R@     STA   ,U+
+       STA   ,S+
+       DECB
+       BNE   A@
+       LDS   <LH1
+       LDA   #1
+       LDB   #9
+       JSR   PCOPY
+       DECB
+       JSR   PCOPY
+       JSR   [RSCRS]
+       JMP   MENU
+Z@     FCB   0,7,31,38,18,11
+       FCB   36,58,20,40,47
+       FCB   60,39,52,26,63
+
+       END

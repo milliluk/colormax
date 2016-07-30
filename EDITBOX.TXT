@@ -1,0 +1,103 @@
+       NAM   EDITBOX
+
+* BLINKY BLINKY MIKEYTERM
+* BANNER...WHATEVER YOU CALL IT
+* IT'S THE EDIT BOX..
+
+* JSR EDITBX
+* WILL DRAW THE EDIT BOX
+* REGARDLESS OF WHETHER OR NOT
+* ANY CHANGES HAVE BEEN MADE
+* TO THE COORDS OR NOT.  JUST
+* DO PCOPYS TO REMOVE THE SHIT
+* IF YOU CHANGE THE COORDS
+*
+* COORDS GO IN:
+* OH1, OH2, OV1, OV2
+* ALL REGS PRESERVED
+*
+* 5 BLACK/3 WHITE PIXELS
+EDITBX PSHS  D,X
+       INC   EFRAME
+       LDA   EFRAME
+       CMPA  #8
+       BLO   A@
+       CLR   EFRAME
+A@
+
+       LDA   #8
+       SUBA  EFRAME
+       PSHS  A
+       LDX   OH1
+       STX   PH1
+
+A@     LDB   ,S
+       BEQ   C@
+       CMPB  #3
+       BHI   B@
+       BRA   D@
+C@     LDA   #8
+       STA   ,S
+D@     LDB   #15
+       FCB   $8C
+B@     LDB   #0   !DON'T TOUCH!
+       LDA   OV1
+       STA   PV1
+       JSR   PSET
+       LDA   OV2
+       STA   PV1
+       JSR   PSET
+       DEC   ,S
+       LDX   PH1
+       INX
+       STX   PH1
+       CMPX  OH2
+       BLS   A@
+
+       LDA   OV1
+       STA   PV1
+       LDA   #8
+       SUBA  EFRAME
+       STA   ,S
+
+A@     LDB   ,S
+       BEQ   C@
+       CMPB  #3
+       BHI   B@
+       BRA   D@
+C@     LDA   #8
+       STA   ,S
+D@     LDB   #15
+       FCB   $8C
+B@     LDB   #0   !DON'T TOUCH!
+       LDX   OH1
+       STX   PH1
+       JSR   PSET
+       LDX   OH2
+       STX   PH1
+       JSR   PSET
+       DEC   ,S
+       INC   PV1
+       LDA   PV1
+       CMPA  OV2
+       BLO   A@
+
+       LEAS  1,S
+       PULS  D,X,PC
+
+EFRAME FCB   0 (0-7) FRAME #
+
+
+       END
+
+
+
+
+
+
+
+
+
+
+
+

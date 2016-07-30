@@ -1,0 +1,149 @@
+       NAM   COLORMAX
+       INCL  LOWDEFS.TXT
+
+EOF    EQU   21
+
+       ORG   $200
+       LDX   #0
+       STX   $420
+       LDX   #$94C
+       LDU   #NNN
+       LDB   #11
+A@     LDA   ,U+
+       STA   ,X+
+       DECB
+       BNE   A@
+
+       LDA   #52
+       STA   $FF03
+       CLRA
+       TFR   A,DP
+
+       LDA   #76
+       STA   $FF90
+       STA   $FFDE
+       LDD   #$3C3D
+       STD   $FFA4
+       LDD   #$3E3F
+       STD   $FFA6
+
+       STA   65496
+       JSR   OPENI
+MNB    JSR   READ1
+       CMPA  #255
+       BEQ   MNV
+
+       JSR   READ1
+       PSHS  A
+       JSR   READ1
+       PULS  B
+       EXG   A,B
+       TFR   D,Y
+
+       JSR   READ1
+       PSHS  A
+       JSR   READ1
+       PULS  B
+       EXG   A,B
+       TFR   D,X
+
+A@     JSR   READ1
+       STA   ,X+
+       LEAY  -1,Y
+       BNE   A@
+       BRA   MNB
+
+MNV    JSR   READ1
+       JSR   READ1
+       JSR   READ1
+       PSHS  A
+       JSR   READ1
+       PULS  B
+       EXG   A,B
+       TFR   D,Y
+       LDA   #$0C
+       FCB   $1F,$8B
+
+       STA   $FFDF
+       LDA   #68
+       STA   $FF90
+
+
+       JMP   ,Y
+
+READ1
+       PSHS  X
+       LDX   $420
+       INX
+       STX   $420
+       PULS  X
+       JMP   $A176
+
+NNN    FCC /DELUXE  BIN/
+
+RGBFLG EQU   $E00    0=RGB
+
+       ORG   $E01
+     
+       INCL  DISKIO2.TXT
+       INCL  GREGSTF2.TXT
+       INCL  WINDOW2.TXT
+       INCL  CHRST.TXT
+       INCL  PATS.TXT
+       INCL  PATTERN.TXT
+       INCL  CHROUT2.TXT
+       INCL  TABLES.TXT
+       INCL  PCOPY.TXT
+       INCL  TITLEPGE.TXT
+
+SETPCL CMPB  #16
+       BHS   A@
+       STB   <COLOR
+       PSHS  B
+       TST   TYPIN2
+       BEQ   T@
+       JSR   UPDMDE
+T@     PULS  B
+A@     STB   <PATTRN
+       TFR   B,A
+       JSR   SHOPAT
+       JMP   MENU
+
+BGBOX  LDA   #126
+       STA   <BV1
+       LDA   #131
+       STA   <BV2
+       LDX   #10
+       STX   <BH1
+       LDX   #22
+       STX   <BH2
+       LDB   ERCOL2
+       JSR   FILLED
+       CLRB
+       JMP   BOX
+FGBOX  LDA   #127
+       STA   <BV1
+       LDA   #130
+       STA   <BV2
+       LDX   #25
+       STX   <BH1
+       LDX   #35
+       STX   <BH2
+       LDB   <COLOR
+       JSR   FILLED
+       DEC   <BV1
+       INC   <BV2
+       LDX   #24
+       STX   <BH1
+       LDX   #36
+       STX   <BH2
+       CLRB
+       JMP   BOX
+
+       INCL  MAIN2.TXT
+ICONS  INCL  ICONS.TXT
+
+       ORG   $182
+       JMP   CWRKS
+
+       END   CWRKS

@@ -1,0 +1,121 @@
+       NAM   CHROUT
+
+* PRINT A MESSAGE TO THE
+* GRAPHICS SCREEN
+PRINT  PULS  X
+A@     LDA   ,X+
+       BEQ   B@
+       BSR   CHROUT
+       BRA   A@
+B@     TFR   X,PC
+
+* OUTPUT A CHARACTER
+*
+* CURSRX,CURSRY=CURSOR POSITION
+* SET=ADDRESS OF CHARACTER SET
+* OFFST=VERTICAL OFFSET (*160)
+* ENTRY: A=CHARACTER TO PRINT
+*  EXIT: CC MODIFIED
+SQUIGL FCB   $FF   0=SQUIGGLE IT
+CURSRX FCB   0     0-40
+CURSRY FCB   0     0-24
+SET    FDB   CHRST LOC OF CHRST
+OFFST  FDB   0
+CHROUT PSHS  D,X,U
+       CMPA  #13
+       BEQ   CR
+       LDX   #$8000
+       LDB   CURSRY
+       BEQ   B@
+A@     LEAX  160*8,X
+       DECB
+       BNE   A@
+B@     LDB   CURSRX
+       LSLB
+       LSLB
+       ABX
+       TFR   X,D
+       ADDD  OFFST
+       TFR   D,U
+
+       LDA   ,S
+       SUBA  #32
+       LDB   #8   BYTES/CHAR
+       MUL
+       ADDD  SET
+       TFR   D,X
+
+* U=SCREEN POSITION
+* X=CHARACTER IN TABLE
+       TST   SQUIGL
+       BNE   Z@
+       LDB   #4
+X@     LDA   ,X+
+       COMA
+       ANDA  #%01010101
+       COMA
+       BSR   CHR2
+       LEAU  160,U
+       LDA   ,X+
+       COMA
+       ANDA  #%10101010
+       COMA
+       BSR   CHR2
+       LEAU  160,U
+       DECB
+       BNE   X@
+       BRA   Y@
+Z@     LDB   #8
+A@     LDA   ,X+
+       BSR   CHR2   *4,STORE!
+       LEAU  160,U
+       DECB
+       BNE   A@
+Y@
+
+       INC   CURSRX
+       LDA   CURSRX
+       CMPA  #40
+       BNE   A@
+CR     CLR   CURSRX
+       INC   CURSRY
+       LDA   CURSRY
+       CMPA  #25
+       BNE   A@
+       CLR   CURSRY
+A@     PULS  D,X,U,PC
+
+* THIS ROUTINE TAKES THE BYTE
+* IN "A", EXPANDS IT TO FIT THE
+* REAL SCREEN, (4 BITS PER
+* PIXEL) AND STORES IT
+* AT U, U+1, U+2, AND U+3
+CHR2   PSHS  D
+       BSR   C4X
+       BSR   C4X
+       STB   ,U
+       BSR   C4X
+       BSR   C4X
+       STB   1,U
+       BSR   C4X
+       BSR   C4X
+       STB   2,U
+       BSR   C4X
+       BSR   C4X
+       STB   3,U
+       PULS  D,PC
+
+* THIS ROUTINE DOES THE ACTUAL
+* 4X EXPANSION
+C4X    ROL   2,S
+       TFR   CC,A
+       ROLB
+       TFR   A,CC
+       ROLB
+       TFR   A,CC
+       ROLB
+       TFR   A,CC
+       ROLB
+       RTS
+
+       END

@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\ANGLES.TXT" />
+    <Text Include="..\ANIMTOOL.TXT" />
+    <Text Include="..\ARROW.TXT" />
+    <Text Include="..\BENDH.TXT" />
+    <Text Include="..\BENDV.TXT" />
+    <Text Include="..\BRUSH.TXT" />
+    <Text Include="..\BRUSHES.TXT" />
+    <Text Include="..\CACHE.TXT" />
+    <Text Include="..\CGP220.TXT" />
+    <Text Include="..\CHROUT.TXT" />
+    <Text Include="..\CHROUT2.TXT" />
+    <Text Include="..\CHRST.TXT" />
+    <Text Include="..\CMAXDEFS.TXT" />
+    <Text Include="..\CURSORS.TXT" />
+    <Text Include="..\COLORMAX.TXT" />
+    <Text Include="..\CYCLE.TXT" />
+    <Text Include="..\DEFINE.TXT" />
+    <Text Include="..\DEFS.TXT" />
+    <Text Include="..\DELUXE.TXT" />
+    <Text Include="..\DISKIO.TXT" />
+    <Text Include="..\DISKIO2.TXT" />
+    <Text Include="..\DISKSTUF.TXT" />
+    <Text Include="..\EDITBOX.TXT" />
+    <Text Include="..\EDITOR.TXT" />
+    <Text Include="..\ELLIPSE.TXT" />
+    <Text Include="..\ELLIPSES.TXT" />
+    <Text Include="..\ENCODED.TXT" />
+    <Text Include="..\ERIKSTUF.TXT" />
+    <Text Include="..\FATBITS.TXT" />
+    <Text Include="..\FILL.TXT" />
+    <Text Include="..\FIZZLE.TXT" />
+    <Text Include="..\FS1.TXT" />
+    <Text Include="..\FS2.TXT" />
+    <Text Include="..\GIFSVE.TXT" />
+    <Text Include="..\GREGSTF2.TXT" />
+    <Text Include="..\GREGSTUF.TXT" />
+    <Text Include="..\HIRES.TXT" />
+    <Text Include="..\ICONS.TXT" />
+    <Text Include="..\INDEX.TXT" />
+    <Text Include="..\LDGIF.TXT" />
+    <Text Include="..\LINES.TXT" />
+    <Text Include="..\LOAD.TXT" />
+    <Text Include="..\LOAD128.TXT" />
+    <Text Include="..\LOWDEFS.TXT" />
+    <Text Include="..\MAIN.TXT" />
+    <Text Include="..\MAIN2.TXT" />
+    <Text Include="..\MOVE.TXT" />
+    <Text Include="..\OUTFNT.TXT" />
+    <Text Include="..\OVERLAYS.TXT" />
+    <Text Include="..\PATS.TXT" />
+    <Text Include="..\PATTERN.TXT" />
+    <Text Include="..\PCOPY.TXT" />
+    <Text Include="..\PRTLYN.TXT" />
+    <Text Include="..\PULLDOWN.TXT" />
+    <Text Include="..\RAMDISK.TXT" />
+    <Text Include="..\REMAP.TXT" />
+    <Text Include="..\RGBCMP.TXT" />
+    <Text Include="..\ROT.TXT" />
+    <Text Include="..\ROTATE.TXT" />
+    <Text Include="..\SETBRS.TXT" />
+    <Text Include="..\SETPAL.TXT" />
+    <Text Include="..\SPECIAL.TXT" />
+    <Text Include="..\STRETCH.TXT" />
+    <Text Include="..\TABLES.TXT" />
+    <Text Include="..\TILT.TXT" />
+    <Text Include="..\TITLEPGE.TXT" />
+    <Text Include="..\WINDOW.TXT" />
+    <Text Include="..\WINDOW2.TXT" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Makefile" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1601C105-D855-490E-9B47-87C3C41D713D}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+    <ProjectName>colormax</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v140</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeOutput>
+    </NMakeOutput>
+    <NMakePreprocessorDefinitions>
+    </NMakePreprocessorDefinitions>
+    <NMakeBuildCommandLine>cd .. &amp;&amp; nmake all</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cd .. &amp;&amp; nmake clean all</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd .. &amp;&amp; nmake clean</NMakeCleanCommandLine>
+    <OutDir>$(SolutionDir)</OutDir>
+    <IntDir>$(SolutionDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <NMakeOutput>
+    </NMakeOutput>
+    <NMakePreprocessorDefinitions>
+    </NMakePreprocessorDefinitions>
+    <NMakeBuildCommandLine>cd .. &amp;&amp; nmake all</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>cd .. &amp;&amp; nmake clean all</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>cd .. &amp;&amp; nmake clean</NMakeCleanCommandLine>
+    <OutDir>$(SolutionDir)</OutDir>
+    <IntDir>$(SolutionDir)</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

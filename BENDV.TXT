@@ -1,0 +1,377 @@
+       NAM   BEND VERTICAL
+
+BENDV  CLR   <LNEWDT
+       LDA   #1
+       LDB   #7
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   DOWN
+       JSR   [PUT]
+       CLRA
+       JSR   [VIEW]
+       JSR   [DRWARW]
+       LDA   #2
+       STA   <WPAGE
+
+* DEFINITION LOOP
+BENDV1 LDA   $FF00
+       ANDA  #1
+       LBEQ  BENDV3
+
+       JSR   [JOYSTK]
+       JSR   [VALID]
+
+       LDX   <JOYX
+       CMPX  <AX
+       BNE   A@
+       LDA   <JOYY
+       CMPA  <AY
+       BEQ   BENDV1
+A@     JSR   [RPLARW]
+       LDX   <JOYX
+       STX   <AX
+       LDA   <JOYY
+       STA   <AY
+
+       LDA   <WPAGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+
+       LDB   <JOYY
+       CMPB  <OV2
+       BHI   A@
+       CMPB  <OV1
+       BLO   Z@
+       JMP   BENDV2
+Z@     LDX   #HOOK4 *BEND UP*
+       STX   ELHK
+       LDB   <OV1
+       SUBB  <JOYY
+       CLRA
+       STD   RY
+       LDA   #$FF
+       STA   <BFLAG2
+       BRA   B@
+A@     LDX   #HOOK5 *BEND DOWN*
+       STX   ELHK
+       SUBB  <OV2
+       CLRA
+       STD   RY
+       CLR   <BFLAG2
+B@     LDD   <OH2
+       SUBD  <OH1
+       LSRA
+       RORB
+       STD   RX
+       ADDD  <OH1
+       STD   X0
+
+       LDX   RY
+       CMPX  #4
+       LBLS  BENDV2
+
+       CLR   <BFLAG1
+
+       JSR   ELLPSE
+       LDX   <OH1
+       STX   <LH1
+       STX   <LH2
+       LDA   <OV1
+       STA   <LV1
+       LDA   <OV2
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+       LDX   <OH2
+       STX   <LH1
+       STX   <LH2
+       JSR   [LINE]
+
+BENDV4 JSR   [DRWARW]
+       LDA   <WPAGE
+       JSR   [VIEW]
+       EORA  #2
+       STA   <WPAGE
+
+       JMP   BENDV1
+
+* SPECIAL CASE: NO BEND!
+BENDV2 LDA   <WPAGE
+       JSR   [PAGEIN]
+       JSR   [GET]
+       LDX   <OH1
+       STX   <BH1
+       LDX   <OH2
+       STX   <BH2
+       LDA   <OV1
+       STA   <BV1
+       LDA   <OV2
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       LDA   #$FF
+       STA   <BFLAG1
+
+       JMP   BENDV4
+
+* THE ACTUAL BEND ROUTINE
+BENDV3 JSR   [RPLARW]
+       LDA   #7
+       LDB   #1
+       JSR   [PCOPY]
+       TST   <BFLAG1
+       LBNE  BENDV5
+
+       LDX   #POINTS
+       LDD   #0
+A@     STD   ,X++
+       STD   ,X++
+       CMPX  #POINTS+384
+       BLO   A@
+
+       LDX   #HOOK6
+       STX   ELHK
+
+       LDD   RX
+       STD   X0
+
+       JSR   ELLPSE
+
+VSHIFT LDA   <ERCOLR
+       PSHS  A
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       STA   ER
+
+       LDA   #5
+       JSR   [PAGEIN]
+       LDU   #$8000
+       LDA   ER
+       TFR   A,B
+A@     STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       STD   ,U++
+       CMPU  #$8000+32000
+       BLO   A@
+
+       JSR   PAGE6
+       LDX   $FFA0
+       STX   $FFA8
+       LDX   $FFA2
+       STX   $FFAA
+       LDX   #$2425
+       STX   $FFAC
+       LDX   #$2627
+       STX   $FFAE
+
+* TASK0=PAGE 6
+* TASK1=PAGE 5
+
+* BFLAG2: 0=DOWN  255=UP
+
+       LDX   #$8000
+       LDY   #POINTS
+       LDD   #0
+       STD   BVX
+       LDD   <OH2
+       SUBD  <OH1
+       STD   MAXBVX
+
+A@     LDD   BVX
+       LDA   D,Y
+       TST   <BFLAG2
+       BEQ   X@
+       PSHS  A
+       LDA   RY+1
+       SUBA  ,S+
+X@     LDB   #160
+       MUL
+       PSHS  X
+       LEAU  D,X
+* LEFT NIBBLE
+       LDA   <OYSZE
+       STA   <TEMP1
+B@     LDB   #TASK0
+       STB   $FF91
+       LDA   ,X
+       LDB   #TASK1
+       STB   $FF91
+       ANDA  #$F0
+       PSHS  A
+       LDA   ,U
+       ANDA  #$0F
+       ORA   ,S+
+       STA   ,U
+       LEAX  160,X
+       LEAU  160,U
+       DEC   <TEMP1
+       BNE   B@
+       LDX   ,S
+       LDD   BVX
+       ADDD  #1
+       LDA   D,Y
+       TST   <BFLAG2
+       BEQ   Y@
+       PSHS  A
+       LDA   RY+1
+       SUBA  ,S+
+Y@     LDB   #160
+       MUL
+       LEAU  D,X
+       LDA   <OYSZE
+       STA   <TEMP1
+* RIGHT NIBBLE
+C@     LDB   #TASK0
+       STB   $FF91
+       LDA   ,X
+       LDB   #TASK1
+       STB   $FF91
+       ANDA  #$0F
+       PSHS  A
+       LDA   ,U
+       ANDA  #$F0
+       ORA   ,S+
+       STA   ,U
+       LEAX  160,X
+       LEAU  160,U
+       DEC   <TEMP1
+       BNE   C@
+       PULS  X
+       LEAX  1,X
+       LDD   BVX
+       ADDD  #2
+       STD   BVX
+       CMPD  MAXBVX
+       LBLS  A@
+
+       LDB   #TASK0
+       STB   $FF91
+
+       LDA   #5
+       LDB   #6
+       JSR   [PCOPY]
+
+       TST   <BFLAG2
+       BEQ   A@
+       LDA   <OV1 *UP*
+       SUBA  RY+1
+       STA   <OV1
+       BRA   B@
+A@     LDA   <OV2
+       ADDA  RY+1
+       STA   <OV2
+B@
+
+       LDA   <OV2
+       SUBA  <OV1
+       INCA
+       STA   <OYSZE
+
+BENDV5 LDA   #7
+       LDB   #1
+       JSR   [PCOPY]
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [GET]
+       JSR   DOWN
+       CLRA
+       JSR   [VIEW]
+       JMP   [MENU]
+
+BVX    FDB   0
+MAXBVX FDB   0
+
+* GET POINT TABLE
+HOOK6  LDX   #POINTS
+       LDD   X0
+       ADDD  X
+       LEAX  D,X
+
+       LDA   Y
+       STA   ,X
+
+       LDX   #POINTS
+       LDD   X0
+       SUBD  X
+       LEAX  D,X
+       LDA   Y
+       STA   ,X
+
+       RTS
+
+HOOK4  LDD   X0
+       ADDD  X
+       STD   <LH1
+       STD   <LH2
+       LDA   <OV1
+       SUBA  Y
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+
+       LDA   <OV2
+       SUBA  Y
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+
+       LDD   X0
+       SUBD  X
+       STD   <LH1
+       STD   <LH2
+       CLRB
+       JSR   [LINE]
+
+       LDA   <OV1
+       SUBA  Y
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]
+
+HOOK5  LDD   X0
+       ADDD  X
+       STD   <LH1
+       STD   <LH2
+       LDA   <OV1
+       ADDA  Y
+       STA   <LV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+
+       LDA   <OV2
+       ADDA  Y
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+
+       LDD   X0
+       SUBD  X
+       STD   <LH1
+       STD   <LH2
+       CLRB
+       JSR   [LINE]
+
+       LDA   <OV1
+       ADDA  Y
+       STA   <LV1
+       STA   <LV2
+       JMP   [LINE]
+
+       END

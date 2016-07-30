@@ -1,0 +1,980 @@
+       NAM   PAINT/FILL
+
+       INCL  DEFS.TXT
+       INCL  LOWDEFS.TXT
+
+       ORG   $6000
+       FDB   PAINT
+       FDB   FLDSHP
+       FDB   FDRAW
+       FDB   LASSO
+       FDB   ROTLSO
+       FDB   INLSO
+       FDB   LAS2
+       FDB   ENDIT
+       FDB   FLDSH2
+       FDB   ROTATE
+
+
+
+PAINT  LDX   <AX
+       LEAX  12,X
+       STX   <AX
+       STX   PAINTH
+       LDA   <AY
+       ADDA  #11
+       STA   <AY
+       STA   PAINTV
+
+       LDX   <AX
+       STX   <PH1
+       LDA   <AY
+       STA   <PV1
+       JSR   [PPOINT]
+       CMPB  PATTRN
+       BNE   Y@
+       JMP   [MENU]
+Y@     TFR   B,A
+       STA   BCKR
+       PSHS  A
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   BCKL
+       ORA   ,S+
+       STA   BCKG
+
+       LDA   PATTRN
+       CMPA  #16
+       LBLO  DOSING
+
+A@     INCB
+       ANDB  #15
+       CMPB  PATTRN
+       BEQ   A@
+       TSTB
+       BEQ   A@
+       TFR   B,A
+*A= TNIAP COLOR*
+
+A@     INCB
+       ANDB  #15
+       CMPB  BCKR
+       BEQ   A@
+       STB   TNR
+       LSLB
+       LSLB
+       LSLB
+       LSLB
+       STB   TNL
+       ORB   TNR
+       STB   TNC
+
+       STA   PNTR
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   PNTL
+       ORA   PNTR
+       STA   PNTC
+
+       CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [PAGEIN]
+
+*REMOVE TNIAP COLORS*
+* MAKE THEM=ONE MORE COLOR *
+       LDA   PNTL
+       STA   TR1+1
+       LDA   TNL
+       STA   TR2+1
+       LDA   PNTR
+       STA   TR3+1
+       LDA   TNR
+       STA   TR4+1
+A@     LDX   #$8000
+       LDY   #160*192
+B@     LDA   ,X
+       TFR   A,B
+       ANDB  #%11110000
+TR1    CMPB  #0     PNTL
+       BNE   C@
+       ANDA  #%00001111
+TR2    ORA   #0     TNL
+       STA   ,X
+C@     TFR   A,B
+       ANDB  #%00001111
+TR3    CMPB  #0     PNTR
+       BNE   D@
+       ANDA  #%11110000
+TR4    ORA   #0     TNR
+       STA   ,X
+D@     INX
+       LEAY  -1,Y
+       BNE   B@
+
+
+       LDB   BCKR
+A@     INCB
+       ANDB  #15
+       CMPB  PNTR
+       BEQ   A@
+       CMPB  TNR
+       BEQ   A@
+
+       LDX   #43
+       STX   <BH1
+       LDX   #310
+       STX   <BH2
+       LDA   #23
+       STA   <BV1
+       LDA   #155
+       STA   <BV2
+       JSR   [BOX]
+
+       JSR   PNTALG
+
+       LDA   #2
+       JSR   [PAGEIN]
+       LDX   #43
+       STX   <BH1
+       LDX   #310
+       STX   <BH2
+       LDA   #23
+       STA   <BV1
+       LDA   #155
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+
+       CLRA
+       LDB   #5
+       JSR   [PCOPY]
+       LDA   #5
+       JSR   [VIEW]
+
+*NOW, REMOVE EVERYTHING -BUT- THE TNIAP COLOR*
+
+       LDA   PNTL
+       STA   RX1+1
+       LDA   PNTR
+       STA   RX2+1
+       LDX   #$8000
+       LDY   #160*192
+A@     LDA   ,X
+       TFR   A,B
+       ANDB  #%11110000
+RX1    CMPB  #0     PNTL
+       BEQ   G@
+       ANDA  #%00001111
+       BRA   Y@
+G@     ORA   #%11110000
+Y@     TFR   A,B
+       ANDB  #%00001111
+RX2    CMPB  #0     PNTR
+       BEQ   H@
+       ANDA  #%11110000
+       BRA   X@
+H@     ORA   #%00001111
+X@     STA   ,X+
+       LEAY  -1,Y
+       BNE   A@
+
+*-NOW-*
+*FOR THE GRAND FINALE'*
+*WE'RE GONNA TAKE OUR WHITE/BLACK
+*IMAGE, AND INITIATE 'DA PATTERNS
+*MEANWHILE, COPYING IT TO THE OTHER PAGE*
+*WHAT FUN, EH?
+
+       JSR   DEALW
+       JSR   FILL8
+
+       LDD   #$343C
+       STD   $FFA4
+       LDA   #$1C
+       STA   $FFA6
+
+       LDY   #$C000
+       LDX   #$8000
+       LDU   #$A000
+
+       LDB   #4
+       PSHS  B
+A@     LDA   ,S
+       CMPA  #1
+       BNE   B@
+       LDD   #$1D00
+       BRA   C@
+B@     LDD   #$2000
+C@     PSHS  D
+D@     LDA   ,X+
+       TFR   A,B
+       COMA
+       ANDA  ,U
+       PSHS  A
+       ANDB  ,Y+
+       ORB   ,S+
+       STB   ,U+
+       DEC   1,S
+       BNE   D@
+       DEC   ,S
+       BNE   D@
+       LEAS  2,S
+       LDX   #$8000
+       LDY   #$C000
+       LDU   #$A000
+       INC   $FFA4
+       INC   $FFA5
+       INC   $FFA6
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+
+
+
+       CLRA
+       JSR   [PAGEIN]
+       CLRA
+       JSR   [VIEW]
+
+
+       JMP   [MENU]
+
+DOSING CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   PATTRN
+       STA   PNTR
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       STA   PNTL
+       ORA   PNTR
+       STA   PNTC
+       LDA   #2
+       JSR   [PAGEIN]
+
+       LDB   BCKR
+       INCB
+       ANDB  #15
+       LDX   #43
+       STX   <BH1
+       LDX   #310
+       STX   <BH2
+       LDA   #23
+       STA   <BV1
+       LDA   #155
+       STA   <BV2
+       JSR   [BOX]
+
+       JSR   PNTALG
+
+       LDX   #43
+       STX   <BH1
+       LDX   #310
+       STX   <BH2
+       LDA   #23
+       STA   <BV1
+       LDA   #155
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+
+
+PNTALG LDU   #$FFFF
+       STU   FARLF2
+
+       LDU   #$8000
+       STU   STCKP
+
+       JSR   FRMCRD
+       STX   PNTPOS
+       STA   PNTONE
+       LDU   #-160
+       STU   DIR
+       JSR   STACK2
+
+PNTLP  JSR   PULL
+       LDX   PNTPOS
+       LDA   PNTONE
+       ANDA  ,X
+       PSHS  A
+       LDA   PNTONE
+       ANDA  BCKG
+       CMPA  ,S+
+       BEQ   Z@
+       JSR   REGS
+       JSR   NLOC
+       BRA   Y@
+Z@
+       JSR   FILL
+Y@     LDU   STCKP
+       CMPU  #$8000
+       BNE   PNTLP
+
+       RTS
+
+
+
+
+
+
+PY     FCB   0
+PX
+       LDA   PY
+       TFR   A,B
+       ANDB  BCKG
+       PSHS  B
+       ANDA  ,X
+       EORA  ,S+
+       COM   PY
+       BGE   ?RTS
+       INX
+       RTS
+
+HGH    RMB   2
+
+FILL
+A@     JSR   DRLR
+       LDD   FARRGT
+       SUBD  DIR
+       CMPD  FARRG2
+       BNE   B@
+       LDD   FARLFT
+       SUBD  DIR
+       CMPD  FARLF2
+       BNE   B@
+       LDA   LFTSDE
+       CMPA  LFTSD2
+       BNE   B@
+       LDA   RGTSDE
+       CMPA  RGTSD2
+       BEQ   C@
+B@     JSR   OLNC
+       JSR   NLOC
+C@
+*MOVE IT UP/DOWN 1 LINE*
+       LDD   PNTPOS
+       ADDD  DIR
+       TFR   D,X
+       STX   PNTPOS
+       LDU   FARLFT
+       STU   FARLF2
+       LDU   FARRGT
+       STU   FARRG2
+       LDA   LFTSDE
+       STA   LFTSD2
+       LDA   RGTSDE
+       STA   RGTSD2
+       LDB   PNTONE
+       ANDB  BCKG
+       PSHS  B
+       LDA   ,X
+       ANDA  PNTONE
+       EORA  ,S+
+       BEQ   A@
+       JSR   NLOC
+       RTS
+
+NLOC   LDU   FARLF2
+       CMPU  #$FFFF
+       BEQ   ?RTS
+       PSHS  X,D,Y,U
+       LDD   FARLF2
+       ADDD  DIR
+       TFR   D,X
+       LDA   LFTSD2
+       STA   PY
+
+       LDA   RGTSD2
+       PSHS  A
+       LDD   FARRG2
+       LSR   ,S+
+       ROLB
+       ROLA
+       TFR   D,Y
+
+       LDA   LFTSD2
+       PSHS  A
+       LDD   FARLF2
+       LSR   ,S+
+       ROLB
+       ROLA
+       PSHS  D
+       TFR   Y,D
+       SUBD  ,S++
+       SUBD  #1
+       TFR   D,Y
+*Y=LENGTH
+
+       CMPY  #0
+       LBLE  Z@
+A@     JSR   PX
+       TSTA BACKGROUND?
+       BEQ   B@ YES
+       LEAY  -1,Y
+       BNE   A@
+       BRA   Z@
+B@     LDU   DIR
+       LDA   PY
+       JSR   STACK1
+       LEAY  -1,Y
+       BEQ   Z@
+C@     JSR   PX
+       TSTA
+       BNE   D@
+       LEAY  -1,Y
+       BNE   C@
+       BRA   Z@
+D@     LEAY  -1,Y
+       BNE   A@
+Z@     PULS  X,D,Y,U,PC
+
+
+
+OLNC
+       PSHS  X,D,Y,U
+       LDD   FARLFT
+       CMPD  #$FFFF
+       LBEQ  OLNCZ
+       SUBD  DIR
+       TFR   D,X
+       LDA   LFTSDE
+       STA   PY
+
+       LDA   RGTSDE
+       PSHS  A
+       LDD   FARRGT
+       LSR   ,S+
+       ROLB
+       ROLA
+       TFR   D,Y
+
+       LDA   LFTSDE
+       PSHS  A
+       LDD   FARLFT
+       LSR   ,S+
+       ROLB
+       ROLA
+       PSHS  D
+       TFR   Y,D
+       SUBD  ,S++
+       SUBD  #1
+       TFR   D,Y
+       CMPY  #0
+       LBLE  OLNCZ
+*Y=LENGTH*
+
+A@     JSR   PX
+       TSTA
+       BEQ   B@
+       LEAY  -1,Y
+       BNE   A@
+       BRA   Z@
+B@     LDA   PY
+       LDU   DIR
+       EXG   D,U
+       COMA
+       COMB
+       ADDD  #1
+       EXG   D,U
+       JSR   STACK1
+       LEAY  -1,Y
+       BEQ   Z@
+D@     JSR   PX
+       TSTA
+       BNE   E@
+       LEAY  -1,Y
+       BEQ   Z@
+       BRA   D@
+E@     LEAY  -1,Y
+       BEQ   Z@
+       BRA   A@
+Z@
+OLNCZ  PULS  X,D,Y,U,PC
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+******
+*DRLR*
+******
+*
+* Fills from current position
+* to the far right, then from
+* the current position to the
+* far left.
+*
+* ENTER: PNTPOS = the start pos
+*        PNTONE = which side
+* EXIT : FARLFT = far left
+*        LFTSDE = far left side
+*        FARRGT = far right
+*        RGTSDE = far right side
+*
+
+DRLR
+       PSHS  X,D,Y,U
+       LDX   PNTPOS
+       LDB   PNTONE
+       CMPB  #%11110000
+       BNE   DRRS
+       LDA   ,X
+       ANDA  #%00001111
+       CMPA  BCKR
+       BEQ   DRAW
+       LDA   -1,X
+       ANDA  #%00001111
+       CMPA  BCKR
+       BEQ   DRAW
+       LDA   PNTONE
+       COMA
+       ANDA  ,X
+       PSHS  A
+       LDA   PNTONE
+       ANDA  PNTC
+       ORA   ,S+
+       STA   ,X
+       PULS  X,D,Y,U,PC
+DRRS   LDA   ,X
+       ANDA  #%11110000
+       CMPA  BCKL
+       BEQ   DRAW
+       LDA   1,X
+       ANDA  #%11110000
+       CMPA  BCKL
+       BEQ   DRAW
+       LDA   PNTONE
+       COMA
+       ANDA  ,X
+       PSHS  A
+       LDA   PNTONE
+       ANDA  PNTC
+       ORA   ,S+
+       STA   ,X
+       PULS  X,D,Y,U,PC
+DRAW   BSR   DRRGT
+       BSR   DRLFT
+       PULS  X,D,Y,U,PC
+
+DRRGT  LDX   PNTPOS
+       LDA   PNTONE
+       CMPA  #%00001111
+       BEQ   Q@
+       LDA   ,X
+       CMPA  BCKG
+       BEQ   H@
+       ANDA  #%00001111
+       CMPA  BCKR
+       BEQ   H@
+       STX   FARRGT
+       COMA
+       STA   RGTSDE
+       RTS
+Q@
+       LDA   ,X
+       ORA   PNTR
+       STA   ,X+
+       BRA   R@
+H@     LDB   PNTC
+       STB   ,X+
+R@     LDB   PNTC
+A@
+       LDA   ,X
+       CMPA  BCKG
+       BNE   B@
+       STB   ,X+
+       BRA   A@
+B@     TFR   A,B
+       ANDB  #%11110000
+       CMPB  BCKL
+       BEQ   E@
+       DEX
+       LDA   #%00001111
+       BRA   TQ
+E@     TFR   A,B
+       ANDB  #%00001111
+       ORB   PNTL
+       STB   ,X
+       LDA   #%11110000
+TQ     STX   FARRGT
+       STA   RGTSDE
+       RTS
+
+Q@     ORA   PNTR
+       STA   ,X
+       STX   FARLFT
+       LDA   PNTONE
+       STA   LFTSDE
+       RTS
+DRLFT  LDX   PNTPOS
+       LDA   PNTONE
+       CMPA  #%00001111
+       BNE   G@
+       LDA   ,X
+       ANDA  #%11110000
+       CMPA  BCKL
+       BNE   Q@
+       LDB   PNTC
+       STB   ,X
+G@     DEX
+V@     LDB   PNTC
+A@
+       LDA   ,X
+       CMPA  BCKG
+       BNE   B@
+       STB   ,X
+       DEX
+       BRA   A@
+B@     TFR   A,B
+       ANDB  #%00001111
+       CMPB  BCKR
+       BNE   M@
+       ANDA  #%11110000
+       ORA   PNTR
+       STA   ,X
+       LDA   #%00001111
+       BRA   C@
+M@     INX
+       LDA   #%11110000
+C@     STX   FARLFT
+       STA   LFTSDE
+       RTS
+
+
+
+
+
+PGEOUT PSHS  X
+       LDX   #$3C3D
+       STX   $FFA4
+       LDX   #$3E3F
+       STX   $FFA6
+       PULS  X,PC
+
+
+
+PULL   PSHS  X,D,Y,U
+       LDX   $FFA4
+       PSHS  X
+       LDX   $FFA6
+       PSHS  X
+       LDA   #5
+       JSR   [PAGEIN]
+*
+       LDU   STCKP
+       LEAU  -11,U
+       STU   STCKP
+       LDX   ,U++
+       STX   PNTPOS
+       LDA   ,U+
+       STA   PNTONE
+       LDX   ,U++
+       STX   DIR
+       LDX   ,U++
+       STX   YLEN
+       LDA   ,U+
+       STA   YLENC
+       LDX   ,U++
+       STX   YLEN2
+       LDA   ,U+
+       STA   YLEN2C
+*
+       PULS  X
+       STX   $FFA6
+       PULS  X
+       STX   $FFA4
+       LDX   #$FFFF
+       STX   FARLFT
+       PULS  X,D,Y,U,PC
+
+
+
+STACK1
+       JMP   STACK
+
+
+
+
+STACK2
+       PSHS  U
+       EXG   D,U
+       COMA
+       COMB
+       ADDD  #1
+       EXG   U,D
+       JSR   STACK
+       PULS  U
+       BRA   STACK
+*******
+*STACK*
+*******
+*
+* Stacks data
+* ENTER: X = PNTPOS
+*        U = DIR
+*        A = PNTONE
+A@     RMB   2
+B@     RMB   1
+C@     RMB   2
+STACK
+       JSR   FSIZ
+       STX   A@
+       STU   C@
+       STA   B@
+       PSHS  X,D,Y,U
+       LDX   $FFA4
+       PSHS  X
+       LDX   $FFA6
+       PSHS  X
+       LDA   #5
+       JSR   [PAGEIN]
+*
+       LDU   STCKP
+       LDX   A@    PNTPOS
+       STX   ,U++
+       LDA   B@    PNTONE
+       STA   ,U+
+       LDX   C@    DIR
+       STX   ,U++
+       LDX   YLEN
+       STX   ,U++
+       LDA   YLENC
+       STA   ,U+
+       LDX   YLEN2
+       STX   ,U++
+       LDA   YLEN2C
+       STA   ,U+
+       STU   STCKP
+       PULS  X
+       STX   $FFA6
+       PULS  X
+       STX   $FFA4
+       PULS  X,D,Y,U,PC
+
+
+
+PHH2   LDA   PVV
+       TFR   A,B
+       ANDB  BCKG
+       PSHS  B
+       ANDA  ,X
+       EORA  ,S+
+       COM   PVV
+       BMI   ?RTS
+       DEX
+       RTS
+
+PHH    LDA   PVV
+       TFR   A,B
+       ANDB  BCKG
+       PSHS  B
+       ANDA  ,X
+       EORA  ,S+
+       COM   PVV
+       BPL   ?RTS
+       INX
+       RTS
+
+PVV    FCB   0
+FSRGS  FCB   0
+FSRG   RMB   2
+FSIZ   PSHS  X,D,Y,U
+       PSHS  X,A
+*FIND RGT*
+       STA   PVV
+A@     BSR   PHH
+       TSTA
+       BEQ   A@
+       DEX
+       LDA   PVV
+B@     STX   YLEN
+       STA   YLENC
+       PULS  X,A
+       STA   PVV
+
+A@     BSR   PHH2
+       TSTA
+       BEQ   A@
+       INX
+       LDA   PVV
+
+       STX   YLEN2
+       STA   YLEN2C
+
+       PULS  X,D,Y,U,PC
+
+
+REGS   PSHS  X,A
+       LDA   YLEN2C
+       STA   LFTSD2
+       LDX   YLEN2
+       STX   FARLF2
+       LDA   YLENC
+       STA   RGTSD2
+       LDX   YLEN
+       STX   FARRG2
+       PULS  X,A,PC
+
+PAINTH FDB   160
+PAINTV FCB   96
+FARLFT FDB   $0000
+FARLF2 FDB   $FFFF
+FARRG2 FDB   $0000
+FARRGT FDB   $0000
+LFTSD2 FCB   0
+RGTSD2 FCB   0
+LFTSDE FCB   0
+RGTSDE FCB   0
+PNTONE RMB   1
+DIR    RMB   2
+PNTPOS RMB   2
+YLEN   RMB   2
+YLENC  RMB   1
+YLEN2  RMB   2
+YLEN2C RMB   1
+STCKP  FDB   $8000
+BCKG   FCB   %00110011
+BCKL   FCB   %00110000
+BCKR   FCB   %00000011
+PNTC   FCB   %11101110
+PNTL   FCB   %11100000
+PNTR   FCB   %00001110
+TNL    FCB   0
+TNR    FCB   0
+TNC    FCB   0
+
+
+
+FRMCRD LDA   #160
+       LDB   PAINTV
+       MUL
+       ADDD  #$8000
+       TFR   D,X
+       LDD   PAINTH
+       LSRA
+       RORB
+       LEAX  D,X
+A@     LDB   #%11110000
+       LDA   PAINTH+1
+       LSRA
+       BCC   B@
+       LDB   #%00001111
+B@     TFR   B,A
+       RTS
+
+
+OURPAT RMB   32
+
+FILL8  LDD   #$1C1D
+       STD   $FFA4
+       LDD   #$1E1F
+       STD   $FFA6
+       LDU   #OURPAT
+       LDX   #$8000
+       LDY   #24
+G@     LDB   #8
+       PSHS  B
+A@     LDB   #40
+       PSHS  B
+B@     LDB   #4
+C@     LDA   ,U+
+       STA   ,X+
+       DECB
+       BNE   C@
+       LEAU  -4,U
+       DEC   ,S
+       BNE   B@
+       LEAS  1,S
+       LEAU  4,U
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       LEAU  -32,U
+       LEAY  -1,Y
+       BNE   G@
+       RTS
+
+DEALW
+       LDX   PATS
+       LDU   #OURPAT
+       LDA   <PATTRN
+       CMPA  #16
+       BHS   B@
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   <PATTRN
+       LDB   #32
+A@     STA   ,U+
+       DECB
+       BNE   A@
+       RTS
+B@     SUBA  #16
+       LDB   #32
+       MUL
+       LEAX  D,X
+
+       LDB   #32
+A@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   A@
+       RTS
+
+       INCL  FS1.TXT
+       INCL  FS2.TXT
+       INCL  ROT.TXT
+       INCL  ROTATE.TXT
+       INCL  ANGLES.TXT
+
+       END
+
+
+

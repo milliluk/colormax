@@ -1,0 +1,139 @@
+       NAM   READJOY
+FLTNUM EQU   10
+
+
+JOYSTK PSHS  X,D,Y,U
+       LDA   #52
+       STA   $FF23
+       STA   $FF03
+       LDA   #60
+       STA   $FF01
+       JSR   RDIT
+       TFR   D,X
+       LSRA
+       RORB
+       PSHS  D
+       TFR   X,D
+       LSRA
+       RORB
+       LSRA
+       RORB
+       LSRA
+       RORB
+       ADDD  ,S++
+*0-191
+*
+       TST   M3414
+       LBNE  Y@
+       PSHS  D
+       SUBD  JOYY1
+       BPL   G@
+       COMA
+       COMB
+       ADDD  #1
+G@     CMPD  #30
+       PULS  D
+       BHI   E@
+       ADDD  JOYY1
+       LSRA
+       RORB
+E@
+       STD   JOYY1
+       ADDD  JOYY2
+       LSRA
+       RORB
+       STD   JOYY2
+Y@     TST   GRIDFL
+       BEQ   U@ 
+       ANDB  #248
+U@     CMPB  #188
+       BLO   T@
+       LDB   #188
+T@     STB   <JOYY
+       LDA   #52
+       STA   $FF01
+       JSR   RDIT
+       TST   GRIDFL
+       BEQ   R@
+       ANDB  #248
+R@     TST   M3414
+       LBNE  V@
+       PSHS  D
+       SUBD  JOYX1
+       BPL   H@
+       COMA
+       COMB
+       ADDD  #1
+H@     CMPD  #30
+       PULS  D
+       BHI   F@
+       ADDD  JOYX1
+       LSRA
+       RORB
+       STD   JOYX1
+       ADDD  JOYX2
+       LSRA
+       RORB
+       STD   JOYX2
+       ADDD  JOYX3
+       LSRA
+       RORB
+       STD   JOYX3
+       BRA   V@
+F@     STD   JOYX1
+       STD   JOYX2
+       STD   JOYX3
+V@     STD   <JOYX
+       PULS  X,D,Y,U,PC
+
+RDIT   LDA   $FF00
+R@     LDA   $FF01
+       BPL   R@
+       PSHS  CC
+       ORCC  #$50
+       LDU   #0
+       LDA   #$FF
+       LDX   #$FF00
+       STA   32,X
+       LDA   #90 *45
+A@     DECA
+       BNE   A@
+
+       LDD   #2*256+190
+       STA   $20,X
+B@     NOP  *2
+       DECB *2
+       BNE   B@ *3
+C@     LDA   ,X
+       BMI   H@
+       NOP
+       NOP
+       NOP
+       LEAU  1,U
+       CMPU  #320
+       BNE   C@
+       LDU   #319
+H@     TFR   U,Y
+       LEAU  1,U
+       CMPU  #320
+       BEQ   Z@
+I@     LDA   ,X
+       BRN   I@
+       NOP
+       NOP
+       NOP
+       LEAU  1,U
+       CMPU  #320
+       BNE   I@
+Z@     TFR   Y,D
+F@     PULS  CC,PC
+JOYY1  RMB   2
+JOYY2  RMB   2
+JOYY3  RMB   2
+JOYX1  RMB   2
+JOYX2  RMB   2
+JOYX3  RMB   2
+
+
+       END
+

@@ -1,0 +1,476 @@
+       NAM   GIF COMPRESSION
+CLRCDE EQU   16 *ALWAYS!*
+EOI    EQU   17
+LSTCDE EQU   4095
+
+
+SVGIF
+       LDX   #$94C
+       LDU   #FILENT
+       LDB   #8
+A@     LDA   ,U+
+       STA   ,X+
+       DECB
+       BNE   A@
+
+       LDA   #255
+       STA   GSL
+       LDA   #5
+       STA   CURCDE
+       LDX   #BUFFER
+       STX   DSKPOS
+       LDD   #'GI
+       STD   $954
+       LDA   #'F
+       STA   $956
+       JSR   [OPENO]
+       LDX   #GIFHDR
+A@     LDA   ,X+
+       JSR   [WRTBYT]
+       CMPX  #HDREOF
+       BNE   A@
+
+       LDX   #$FFB0
+A@     LDA   ,X+
+       ANDA  #63
+       JSR   CC3GIF
+       LDA   GRED
+       JSR   [WRTBYT]
+       LDA   GGREEN
+       JSR   [WRTBYT]
+       LDA   GBLUE
+       JSR   [WRTBYT]
+       CMPX  #$FFC0
+       BNE   A@
+
+       LDX   #GIFHD2
+A@     LDA   ,X+
+       JSR   [WRTBYT]
+       CMPX  #HDREO2
+       BNE   A@
+
+       CLRA
+       JSR   [PAGEIN]
+       JSR   [DIALOG]
+       FCC   " ",13
+       FCC   "Crunching picture data",13
+       FCC   " ",13
+       FCB   0
+       LDA   #1
+       LDB   #5
+       JSR   [PCOPY]
+       LDA   #5
+       JSR   [PAGEIN]
+       LDA   #5
+       JSR   [VIEW]
+       JSR   INISTR
+
+       CLR   GPIXA
+       LDX   #$8000
+       STX   GPIXL
+
+       LDY   #$FFFF
+       STY   C
+
+       LDD   #CLRCDE
+       JSR   OUTPTH
+
+B3     LDX   GPIXL
+       CMPX  #$8000+32000
+       LBEQ  BZ
+       JSR   GPIXEL
+       STB   K
+       JSR   SEARCH
+       BCC   B4N
+B4Y    LDY   WHCG
+       STY   C
+       STY   KOWEE
+       BRA   B3
+B4N    JSR   ADDIT
+       LDD   C
+       JSR   OUTPTH
+       LDX   LSTG
+       DEX
+       DEX
+       CMPX  WHNBAD
+       BNE   I@
+       JSR   UPIZ
+I@     LEAX  2,X
+       CMPX  #LSTCDE
+       BNE   B@
+RSTIT  LDD   #CLRCDE
+       JSR   OUTPTH
+       JSR   INISTR
+B@
+       CLRA
+       LDB   K
+       STD   C
+       BRA   B3
+
+BZ     LDD   C
+       CMPD  #16
+       BHI   U@
+       JSR   OUTPTH
+       BRA   Z@
+U@     LDD   KOWEE
+       JSR   OUTPTH
+Z@
+
+       LDD   #EOI
+       JSR   OUTPTH
+       JSR   OUTPTH
+       JSR   OUTPTH
+       JSR   WRY
+       CLRA
+       JSR   [WRTBYT]
+       LDA   #';
+       JSR   [WRTBYT]
+       JSR   [CLOSE]
+       CLRA
+       JSR   [VIEW]
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+
+KOWEE  RMB   2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+C      FDB   $FFFF
+K      FCB   0
+
+ENDCK  FDB   $8000
+WHCG   FDB   0
+LSTG   FDB   0
+
+*BCC=NOT FOUND
+*BCS=FOUND IT.
+*WHCG=Entry number found in, or $FFFF for unexistant
+SEARCH JSR   PAGSTR
+       LDY   #$FFFE
+       STY   WHCG
+       LDY   LSTG
+       LDA   K
+       LDU   C
+       LDX   ENDCK
+       LEAY  -1,Y
+       LEAX  -3,X
+A@     CMPX  #$8000-3
+       BEQ   NOTIN
+       CMPA  2,X
+       BNE   B@
+       CMPU  ,X
+       BNE   B@
+       JSR   PAGPIX
+       STY   WHCG
+       ORCC  #1
+       RTS
+B@     LEAX  -3,X
+       LEAY  -1,Y
+       BRA   A@
+NOTIN  LDY   #$FFFE
+       STY   WHCG
+       JSR   PAGPIX
+       ANDCC #$FE
+       RTS
+
+
+ADDIT  JSR   PAGSTR
+       LDX   ENDCK
+       LDU   C
+       STU   ,X++
+       LDA   K
+       STA   ,X+
+       STX   ENDCK
+       JSR   PAGPIX
+       LDX   LSTG
+       INX
+       STX   LSTG
+       RTS
+
+
+PAGSTR PSHS  X
+       LDX   #$1C1D
+       STX   $FFA4
+       LDX   #$1E1F
+       STX   $FFA6
+       PULS  X,PC
+
+GLS
+GSL    FCB   0
+
+PAGPIX TST   GSL
+       BNE   Z@
+       PSHS  X
+       LDX   #$3031
+       STX   $FFA4
+       LDX   #$3233
+       STX   $FFA6
+       PULS  X,PC
+Z@     PSHS  X
+       LDX   #$2425
+       STX   $FFA4
+       LDX   #$2627
+       STX   $FFA6
+       PULS  X,PC
+
+
+GPIXL  FDB   $8000
+GPIXA  FCB   0
+GPIXEL PSHS  X,A
+       COM   GPIXA
+       BNE   A@
+       LDX   GPIXL
+       COM   -1,X
+       LDA   ,X+
+       STX   GPIXL
+       ANDA  #15
+       TFR   A,B
+       PULS  X,A,PC
+A@     LDX   GPIXL
+       LDA   ,X
+       LSRA
+       LSRA
+       LSRA
+       LSRA
+       TFR   A,B
+       PULS  X,A,PC
+
+
+
+OUTPTH PSHS  X,D,Y,U
+       JSR   OUTPT2
+       PULS  X,D,Y,U,PC
+
+UPIZ   PSHS  X,D,Y,U
+A@     LDA   CWDT
+       INCA
+       CMPA  #12
+       BLO   Y@
+       LDA   #12
+Y@     STA   CWDT
+       LDX   #BITS
+       LSLA
+       LDX   A,X
+       DEX
+       STX   WHNBAD
+       PULS  X,D,Y,U,PC
+
+
+BITS   FDB   1,2,4,8,16,32,64,128,256,512,1024,2048,4096
+
+*Call with:
+* D=the code to output
+* CWDTH=Width of codes
+OUTPT2 PSHS  X,D,Y,U
+       PSHS  D
+       CLR   ,-S
+       LDA   NAVL
+A@     BEQ   B@
+       LSL   2,S
+       ROL   1,S
+       ROL   ,S
+       DECA
+       BRA   A@
+B@
+
+       LDA   2,S
+       ORA   REMNDR
+       STA   REMNDR
+
+       LDB   NAVL
+       ADDB  CWDT
+       CMPB  #8
+       BLO   Z@
+       SUBB  #8
+       LDA   REMNDR
+       JSR   WRTDSK
+       LDA   1,S
+       STA   REMNDR
+       CMPB  #8
+       BLO   Z@
+       SUBB  #8
+       JSR   WRTDSK
+       LDA   ,S
+       STA   REMNDR
+Z@     STB   NAVL
+       LEAS  3,S
+       PULS  X,D,Y,U,PC
+
+
+
+
+INISTR PSHS  X,D,Y,U
+       JSR   PAGSTR
+       LDB   #16
+       PSHS  B
+       CLRA
+       LDX   #$8000
+       LDU   #$FFFF
+       STU   C
+A@     STU   ,X++
+       STA   ,X+
+       INCA
+       DEC   ,S
+       BNE   A@
+       LEAS  1,S
+       LDU   #$FF00
+       STU   ,X++
+       CLR   ,X+
+       STU   ,X++
+       CLR   ,X+
+       STX   ENDCK
+
+       LDA   CURCDE
+       STA   CWDT
+       LSLA
+       LDX   #BITS
+       LDX   A,X
+       DEX
+       STX   WHNBAD
+
+       LDA   CWDT
+       DECA
+       LDX   #BITS
+       LSLA
+       LDX   A,X
+       LEAX  2,X
+       STX   LSTG
+
+       JSR   PAGPIX
+       PULS  X,D,Y,U,PC
+
+
+
+
+
+*0 to 7 - next available bit to fill*
+NAVL   FCB   0
+REMNDR FCB   0
+CWDT   FCB   5
+WHNBAD FDB   31
+GIFON  FCB   0
+
+
+
+GIFHDR FCC   'GIF87a'
+       FCB   64,1,$C8,0,%10010011,0,0
+
+HDREOF EQU   *
+
+GIFHD2 FCB   $2C,0,0,0,0,64,1,$C8,0,%00000011
+       FCB   4
+HDREO2 EQU   *
+
+CC3GIF PSHS  A
+       CLR   GRED
+       CLR   GGREEN
+       CLR   GBLUE
+       ANDA  #32
+       LSLA
+       LSLA
+       STA   GRED
+       LDA   ,S
+       ANDA  #4
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   GRED
+       STA   GRED
+
+       LDA   ,S
+       ANDA  #16
+       LSLA
+       LSLA
+       LSLA
+       PSHS  A
+       LDA   1,S
+       ANDA  #2
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       STA   GGREEN
+
+       LDA   ,S
+       ANDA  #8
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       PSHS  A
+       LDA   1,S
+       ANDA  #1
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       LSLA
+       ORA   ,S+
+       STA   GBLUE
+       PULS  A,PC
+
+GRED   RMB   1
+GGREEN RMB   1
+GBLUE  RMB   1
+
+DSKPOS RMB   2
+WRIT   FCB   0
+WRTDSK PSHS  X,D,Y,U
+       CLR   WRIT
+       COM   WRIT
+       LDX   DSKPOS
+       STA   ,X+
+       STX   DSKPOS
+       CMPX  #BUFFER+254
+       BEQ   P@
+       PULS  X,D,Y,U,PC
+P@     BSR   WRY
+       PULS  X,D,Y,U,PC
+
+WRY    LDD   DSKPOS
+       SUBD  #BUFFER
+       TFR   B,A
+       JSR   [WRTBYT]
+       TSTB
+       BEQ   Q@
+       LDX   #BUFFER
+A@     LDA   ,X+
+       JSR   [WRTBYT]
+       DECB
+       BNE   A@
+Q@     LDX   #BUFFER
+       STX   DSKPOS
+       RTS
+
+       END

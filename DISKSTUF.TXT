@@ -1,0 +1,484 @@
+       NAM   DISKSTUF
+DIR    CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       JSR   GETDIR
+       JSR   [WTBUT]
+P@     LDA   $FF00
+       BITA  #1
+       BNE   P@
+       LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+
+GETDIR 
+       LDA   #$FF
+       STA   [COPERR]
+       LDX   #0
+       STX   [OFFST]
+       LDX   #$400
+       STX   STUFF
+       CLR   NUMDIR
+       LDA   #2
+       STA   >$EA
+       LDD   #$1103
+       STD   >$EC
+       LDX   #$600
+       STX   >$EE
+*      LDA   #30
+*      STA   >$EB
+       JSR   [DSKCON]
+
+       LDX   #38
+       STX   <BH1
+       LDX   #320-38
+       STX   <BH2
+       LDA   #30
+       STA   <BV1
+       LDA   #162
+       LDB   #15
+       STA   <BV2
+       JSR   [FILLED]
+       LDB   #15
+       JSR   [BOX]
+       JSR   [MVECRD]
+       CLRB
+       JSR   [BOX]
+       JSR   [MVECRD]
+       LDB   #15
+       JSR   [BOX]
+       JSR   [MVECRD]
+       CLRB
+       JSR   [BOX]
+       JSR   [MVECRD]
+       CLRB
+       JSR   [BOX]
+       JSR   [MVECRD]
+
+
+       LDA   #30
+       STA   <LPRTV
+       CLR   ,-S
+       DEC   ,S
+
+DIRLP  LDA   ,S
+       ADDA  #1
+       CMPA  #3
+       BNE   Y@
+       CLRA
+Y@     STA   ,S
+       TSTA
+       BNE   R@
+       LDA   <LPRTV
+       ADDA  #10
+       STA   <LPRTV
+R@     LDA   ,S
+       LDX   #DRTBL
+       LDB   A,X
+       CLRA
+       STD   <LPRTH
+       JSR   GETENT
+       BMI   Z@
+       LDX   #FILENT
+       TST   ,X
+       BEQ   R@
+       LDY   STUFF
+       LDB   #8
+S@     LDA   ,X+
+       STA   ,Y+
+       STY   STUFF
+       JSR   [LYNPRT]
+       DECB
+       BNE   S@
+       INC   NUMDIR
+       BRA   DIRLP
+Z@     PULS  A
+       CLR   $FF40
+       CLR   $986
+       RTS
+
+NUMDIR FCB   0 *NUMBER OF ENTRIES PRINTED
+
+
+FILENT
+A@     BSZ   8
+GETENT LDU   #A@
+       BSR   GETENX
+       RTS
+
+GETENX CLR   ,U
+       LDX   >$EE
+       LDA   ,X
+       BEQ   Z@
+       BMI   ?RTS
+       LDD   8,X
+       CMPD  $954
+       BNE   Z@
+       LDA   10,X
+       CMPA  $956
+       BNE   Z@
+       LDB   #8
+Y@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   Y@
+Z@     LDY   >$EE
+       LEAY  32,Y
+       STY   >$EE
+       CMPY  #$700
+       BLO   K@
+       LDY   #$600
+       STY   >$EE
+       INC   >$ED
+       JSR   [DSKCON]
+K@     ANDCC #%11110111
+       RTS
+
+
+DRTBL  FCB   6*8,16*8,26*8
+
+
+GETFLS LDA   #$FF
+       STA   [COPERR]
+       LDX   #69
+       STX   <BH1
+       LDX   #251
+       STX   <BH2
+       LDA   #130
+       STA   <BV1
+       LDA   #184
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       LDB   #15
+       JSR   [BOX]
+       JSR   [MVECRD]
+       CLRB
+       JSR   [BOX]
+       JSR   [MVECRD]
+       LDB   #15
+       JSR   [BOX]
+       JSR   [MVECRD]
+       CLRB
+       JSR   [BOX]
+       JSR   [MVECRD]
+       CLRB
+       JSR   [BOX]
+       JSR   [MVECRD]
+
+       LDB   #17*8
+       STB   <LPRTV
+       LDD   DKMSG2+1
+       ORA   #32 make it lowercase
+       ORB   #32                 "
+       STD   DKMSG2+1            "
+       LDA   DKMSG2+3            "
+       ORA   #32                 "
+       STA   DKMSG2+3            "
+       LDX   #DKMSG2
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #160
+       SUBD  ,S++
+       STD   <LPRTH
+       LDX   #DKMSG2
+KC     LDA   ,X+
+       BEQ   KD
+       JSR   [LYNPRT]
+       BRA   KC
+
+DKMSG2 FCC   "Load which file?",0
+KD     JSR   MAKIT1
+
+
+
+       LDX   #DKMSGX
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #120
+       SUBD  ,S++
+       STD   <LPRTH
+       LDA   #21*8
+       STA   <LPRTV
+       LDX   #DKMSGX
+       JSR   KJS
+       LDX   #DKMSGY
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #205
+       SUBD  ,S++
+       STD   <LPRTH
+       LDX   #DKMSGY
+       JSR   KJS
+       JMP   PPAST
+DKMSG  NOP
+DKMSGX FCC   "LOAD",0
+DKMSGY FCC   "CANCEL",0
+
+*I FUCKED WITH THIS TOO*
+PPAST  LDX   #12*8-7+4
+       STX   <BH1
+       LDX   #18*8+7-5  (53)
+       STX   <BH2
+       LDA   #21*8-3+1
+       STA   <BV1
+       LDA   #22*8+3-3
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       JSR   PRETTY
+       LDX   #22*8-3+4
+       STX   <BH1
+       LDX   #29*8+5-3-4
+       STX   <BH2
+       LDA   #21*8-3+1
+       STA   <BV1
+       LDA   #22*8+3-3
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       JMP   PRETTY
+
+CALCRD LDD   <AX
+       CMPD  #38
+       BLO   Z@
+       CMPD  #320-38
+       BHI   Z@
+       SUBD  #38
+       LDY   #0
+A@     CMPD  #84
+       BLO   B@
+       SUBD  #84
+       LEAY  1,Y
+       BRA   A@
+B@     PSHS  Y *0,1 OR 2
+       LDA   <AY
+       CMPA  #38
+       BLO   Y@
+       CMPA  #130
+       BHI   Y@
+       SUBA  #38
+       CLRB
+MQ     CMPA  #10
+       BLO   MW
+       SUBA  #10
+       INCB
+       BRA   MQ
+MW
+       LDA   #3
+       MUL
+       ADDD  ,S++
+*D=0-UP.. FILENAME NUMBER.
+       RTS
+Y@     LEAS  2,S
+Z@     LDD   #$FFFF
+       RTS
+
+
+
+STUFF  RMB   2
+
+E@     RMB   2
+F@     RMB   2
+G@     RMB   2
+H@     RMB   2
+DSKJOY CLR   FILENT
+       LDX   [USESYM]
+       STX   E@
+       LDX   [USESY2]
+       STX   F@
+       LDX   [USEOUT]
+       STX   G@
+       LDX   [USEOU2]
+       STX   H@
+A@     LDX   #ARROW
+       STX   [USESYM]
+       LDX   #ARR2
+       STX   [USESY2]
+       LDX   #AROUT
+       STX   [USEOUT]
+       LDX   #AROU2
+       STX   [USEOU2]
+       LDX   RTS
+       STX   [MVEHK]
+       JSR   [MVEARW]
+       LDX   E@
+       STX   [USESYM]
+       LDX   F@
+       STX   [USESY2]
+       LDX   G@
+       STX   [USEOUT]
+       LDX   H@
+       STX   [USEOU2]
+       JSR   CALCRD
+       CMPD  #$FFFF
+       BEQ   Y@
+       LDA   #8
+       MUL
+       ADDD  #$400
+       TFR   D,X
+       CMPX  STUFF
+       LBHS  A@
+       LDD   #15*8
+       STD   <LPRTH
+       LDA   #19*8
+       STA   <LPRTV
+       JSR   MAKIT1
+       LDU   #FILENT
+       LDB   #8
+B@     LDA   ,X+
+       STA   ,U+
+       DECB
+       BNE   B@
+       LDU   #FILENT
+       LDB   #8
+C@     LDA   ,U+
+       JSR   [LYNPRT]
+       DECB
+       BNE   C@
+       JMP   A@
+Y@     LDY   #0
+       LDD   <AX
+       CMPD  #12*8-7
+       BLO   U@
+       CMPD  #18*8+7
+       BHI   U@
+       LDA   <AY
+       CMPA  #21*8-3
+       BLO   U@
+       CMPA  #22*8+3
+       BHI   U@
+       RTS
+U@     LDD   <AX
+       CMPD  #22*8-3
+       LBLO  A@
+       CMPD  #29*8+5
+       LBHI  A@
+       LDA   <AY
+       CMPA  #21*8-3
+       LBLO  A@
+       CMPA  #22*8+3
+       LBHI  A@
+       LDY   #1
+       RTS
+
+ASKTTL JSR   [DIALOG]
+       FCB   13
+       FCC   "Enter title for picture",13
+       FCC   ">                                                        <",13
+       FCB   13
+       FCB   0
+
+       LDX   #$2DD
+       CLR   ,X
+       LDD   #3*8
+       STD   <LPRTH
+       LDA   #96
+       STA   <LPRTV
+A@     JSR   [POLCAT]
+       BEQ   A@
+       CMPA  #13
+       BEQ   B@
+       CMPA  #8
+       BEQ   C@
+       CMPA  #3
+       BEQ   X@
+       CMPX  #$2DD+30
+       BEQ   A@
+       LDY   <LPRTH
+       CMPY  #320-32
+       BHS   A@
+       STA   ,X+
+       CLR   ,X
+       JSR   [LYNPRT]
+       BRA   A@
+B@     LDA   #2
+       CLRB
+       JMP   [PCOPY]
+X@     LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+C@     CMPX  #$2DD
+       BEQ   A@
+       DEX
+       CLR   ,X
+       LDU   #$2DD
+       LDD   #3*8
+       STD   <LPRTH
+       STD   <BH1
+       LDD   #319-24
+       STD   <BH2
+       LDA   #96
+       STA   <BV1
+       LDA   #96+10
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+Q@     LDA   ,U+
+       BEQ   R@
+       JSR   [LYNPRT]
+       BRA   Q@
+R@     BRA   A@
+
+
+
+*I FUCKED WITH THIS*
+MAKIT1 LDD   #15*8-2
+       STD   <BH1
+       LDD   #25*8+2
+       STD   <BH2
+       LDA   #19*8-2+1
+       STA   <BV1
+       LDA   #20*8+2-1
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       LDD   #15*8-3
+       STD   <BH1
+       LDD   #25*8+3
+       STD   <BH2
+       LDA   #19*8-3+1
+       STA   <BV1
+       LDA   #20*8+3-1
+       STA   <BV2
+       CLRB
+       JSR   [BOX]
+       JMP   PRETTY
+
+KJS    LDA   ,X+
+       BEQ   ?RTS
+       JSR   [LYNPRT]
+       BRA   KJS
+
+* SHADOWS COORDS IN BH1-BV2
+PRETTY PSHS  A,X
+       LDX   <BH1
+       LEAX  2,X
+       STX   <LH1
+       LDX   <BH2
+       LEAX  1,X
+       STX   <LH2
+       LDA   <BV2
+       INCA
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+       LDA   <BV1
+       ADDA  #2
+       STA   <LV1
+       LDX   <BH2
+       INX
+       STX   <LH1
+       STX   <LH2
+       JSR   [LINE]
+       PULS  A,X,PC
+
+       END

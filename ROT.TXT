@@ -1,0 +1,256 @@
+       NAM   ROT
+
+
+* DRAW ROTATED BOX:
+SHOBOX PSHS  X,D,Y,U
+       LDX   #-45+160
+       STX   <BH1
+       LDX   #55+160
+       STX   <BH2
+       LDA   #-45+96
+       STA   <BV1
+       LDA   #30+96-2
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+
+       LDD   ANGLE
+*      STD   $5F04
+       JSR   SINE
+       LDD   ANGLE
+       JSR   COSINE
+
+*      LDY   SINVAL
+*      STY   $5F00
+*      LDY   COSVAL
+*      STY   $5F02
+
+       LDX   #-25
+       LDY   #-20
+       JSR   ROTPOS
+       EXG   X,Y
+       PSHS  X,Y
+       LDX   #25
+       LDY   #-20
+       JSR   ROTPOS
+       EXG   X,Y
+       PSHS  X,Y
+       LDX   #25
+       LDY   #20
+       JSR   ROTPOS
+       EXG   X,Y
+       PSHS  X,Y
+       LDX   #-25
+       LDY   #20
+       JSR   ROTPOS
+       LEAX  170,X
+       STX   <LH1
+       STX   <BH1
+       TFR   Y,D
+       ADDD  #86
+       STB   <LV1
+       STB   <BV1
+
+       PULS  X,D
+       BSR   Z@
+       PULS  X,D
+       BSR   Z@
+       PULS  X,D
+       BSR   Z@
+       LDX   <BH1
+       STX   <LH2
+       LDA   <BV1
+       STA   <LV2
+       CLRB
+       JSR   [LINE]
+       PULS  X,D,Y,U,PC
+Z@     LEAX  170,X
+       ADDD  #86
+       STX   <LH2
+       STB   <LV2
+       PSHS  X,B
+       CLRB
+       JSR   [LINE]
+       PULS  X,B
+       STX   <LH1
+       STB   <LV1
+       RTS
+
+
+
+* ROTATE DEFINITION
+
+ROTATE CLRA
+       LDB   #2
+       JSR   [PCOPY]
+       LDA   #2
+       JSR   [VIEW]
+       CLRA
+       JSR   [PAGEIN]
+
+       LDX   #96
+       STX   <BH1
+       LDX   #256
+       STX   <BH2
+       LDA   #34
+       STA   <BV1
+       LDA   #146
+       STA   <BV2
+       LDB   #15
+       JSR   [FILLED]
+       CLRB
+       JSR   [BOX]
+       JSR   BUMP0
+       LDB   #15
+       JSR   [BOX]
+       CLRB
+       JSR   BUMP0
+       JSR   [BOX]
+       JSR   BUMP0
+       JSR   [BOX]
+
+* OK & CANCEL BOXES
+       LDX   #16*8
+       STX   <LPRTH
+       LDA   #16*8
+       STA   <LPRTV
+       LDA   #14
+       STA   CURSRX
+       LDA   #16
+       STA   CURSRY
+       JSR   BSBOX0
+       LDX   #KST1
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #133
+       SUBD  ,S++
+       STD   <LPRTH
+       LDX   #KST1
+       JSR   KST3
+
+       LDA   #24
+       STA   CURSRX
+       LDX   #KST2
+       JSR   [FLEN]
+       LSRA
+       RORB
+       PSHS  D
+       LDD   #216
+       SUBD  ,S++
+       STD   <LPRTH
+       JSR   BSBOX0
+       LDX   #KST2
+       JSR   KST3
+
+       CLRA
+       JSR   [VIEW]
+
+       LDD   #0
+       STD   ANGLE
+       JSR   SHOBOX
+
+* MAIN LOOP *
+ROT2   JSR   [PLNARW]
+
+       LDA   <AY
+       CMPA  #16*8-2
+       BLO   ROT3
+       CMPA  #16*8+10
+       BHI   ROT3
+       LDX   <AX
+       CMPX  #14*8-2
+       BLO   ROT3
+       CMPX  #20*8+2
+       LBLO  OK
+       CMPX  #24*8-2
+       BLO   ROT3
+       CMPX  #32*8+2
+       LBLO  CANCEL
+
+ROT3   LDX   <AX
+       CMPX  #96+80
+       BHI   A@
+       LDD   ANGLE
+       SUBD  #1
+       BGE   M@
+       LDD   #359
+M@     STD   ANGLE
+       JSR   SHOBOX
+       JMP   ROT2
+A@     LDD   ANGLE
+       ADDD  #1
+       CMPD  #360
+       BNE   L@
+       LDD   #0
+L@     STD   ANGLE
+       JSR   SHOBOX
+       JMP   ROT2
+
+CANCEL LDA   #2
+       CLRB
+       JSR   [PCOPY]
+       JMP   [MENU]
+
+OK     JSR   [GET]
+       JMP   DOROT
+
+BSBOX0 LDA   CURSRX
+       LDB   #8
+       MUL
+       SUBD  #6
+       STD   <BH1
+       ADDD  #56
+       STD   <BH2
+       LDA   CURSRY
+       LDB   #8
+       MUL
+       SUBB  #2
+       STB   <BV1
+       ADDB  #10
+       STB   <BV2
+       CLRB
+       JSR   [BOX]
+
+PRETTY LDX   BH1
+       LEAX  2,X
+       STX   <LH1
+       LDX   BH2
+       LEAX  1,X
+       STX   <LH2
+       LDA   <BV2
+       INCA
+       STA   <LV1
+       STA   <LV2
+       JSR   [LINE]
+       LDA   <BV1
+       INCA
+       INCA
+       STA   <LV1
+       LDX   <BH2
+       INX
+       STX   <LH1
+       STX   <LH2
+       JMP   [LINE]
+
+KST1   FCC   "ROTATE",0
+KST2   FCC   "CANCEL",0
+
+KST3   LDA   ,X+
+       BEQ   ?RTS
+       JSR   [LYNPRT]
+       BRA   KST3
+
+BUMP0  LDX   <BH1
+       DEX
+       STX   <BH1
+       LDX   <BH2
+       INX
+       STX   <BH2
+       INC   <BV2
+       DEC   <BV1
+       RTS
+
+       END
+
