@@ -213,7 +213,7 @@ R@     LDA   #3
        PULS  X,D,Y,U,PC
 
 
-
+   	   ORG $2DA
 
 CVB    PSHS  B,U
        LEAU  4,U

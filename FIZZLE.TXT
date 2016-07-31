@@ -20,7 +20,7 @@ FIZZLE
        LDA   #63
        STA   $FF9A
 
-       STA   65496
+;       STA   65496
 
        LDX   #$7FFE
        STX   <BH1

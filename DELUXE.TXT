@@ -5,8 +5,6 @@
        ORG   $E01
        INCL  CMAXDEFS.TXT
 
-       FCC   "Hi Don!!"
-
 CWRKS  LDA   #PGE0/256
        TFR   A,DP
 
@@ -69,7 +67,7 @@ RGBFLG EQU   $E00    0=RGB
        INCL  EDITBOX.TXT :7
        INCL  DEFINE.TXT :7
        INCL  MOVE.TXT :8
-       INCL  HIRES.TXT :8
+       INCL  NEWJOY.TXT :8
        INCL  SPECIAL.TXT :8
        INCL  DISKIO.TXT :8
 
@@ -805,7 +803,7 @@ R@     LDA   ,X+
        DECB
        BNE   R@
        JSR   DIALOG
-       FCC   "Color Max Deluxe 1.02",13
+       FCC   "Color Max Deluxe 1.03",13
        FCC   " ",13
        FCC   "Written and Copyright 1987 by",13
 C@     FCC   "---- THIS SPACE FOR RENT ----",13
@@ -931,6 +929,6 @@ C@     LDA   $FF00
        JMP   MENU
 X@     RMB   1
 Y@     RMB   2
-Z@     RMB   124
-
+Z@     RMB   128
+ 
        END   CWRKS

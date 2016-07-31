@@ -1,0 +1,8 @@
+.vs
+*.lst
+*.map
+*.BIN
+build/colormax.VC*
+build/colormax.log
+colormax.dsk
+
