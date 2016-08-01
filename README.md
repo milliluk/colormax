@@ -1,5 +1,7 @@
 # Color Max Deluxe
 
+![screenshot](./build/screenshot.png)
+
 Original 6809 assembly-language source code for Color Max Deluxe.
 
 Released 1987 for the [TRS-80 Color Computer 3](https://en.wikipedia.org/wiki/TRS-80_Color_Computer).
